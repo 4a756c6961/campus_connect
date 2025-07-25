@@ -4,24 +4,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'screens/auth_screen.dart';
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+void main() {
+  runApp(MyApp());
+}
 
+class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (ctx, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasData) {
-            return const HomeScreen(); // den machen wir gleich
-          }
-          return const AuthScreen();
-        },
+      title: 'Campus Connect',
+      theme: ThemeData(
+        primarySwatch: Colors.deepOrange,
+        colorScheme: ColorScheme.fromSwatch(
+          primarySwatch: Colors.deepOrange,
+        ).copyWith(secondary: Colors.deepPurple),
+        fontFamily: 'Lato',
       ),
+      home: AuthScreen(), // <--- App startet mit diesem Screen
+      routes: {
+        AuthScreen.routeName: (ctx) => AuthScreen(),
+        // hier kannst du später weitere Screens eintragen
+      },
     );
   }
 }
