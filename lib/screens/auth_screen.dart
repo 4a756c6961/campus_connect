@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 enum AuthMode { Signup, Login }
 
@@ -89,31 +90,72 @@ class _AuthCardState extends State<AuthCard> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   AuthMode _authMode = AuthMode.Login;
 
-  final Map<String, String> _authData = {'email': '', 'password': ''};
+  final Map<String, String> _authData = {
+    'email': '',
+    'password': '',
+    'firstname': '',
+    'lastname': '',
+  };
 
   bool _isLoading = false;
   final TextEditingController _passwordController = TextEditingController();
-
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
-
-    _formKey.currentState!.save();
-
-    setState(() => _isLoading = true);
-
-    if (_authMode == AuthMode.Login) {
-      // TODO: Log user in
-    } else {
-      // TODO: Sign user up
-    }
-
-    setState(() => _isLoading = false);
-  }
-
   void _switchAuthMode() {
     setState(() {
       _authMode =
           _authMode == AuthMode.Login ? AuthMode.Signup : AuthMode.Login;
+    });
+  }
+
+  Future<void> _submit() async {
+    final isValid = _formKey.currentState!.validate();
+    if (!isValid) return;
+
+    _formKey.currentState!.save();
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final auth = FirebaseAuth.instance;
+
+      if (_authMode == AuthMode.Login) {
+        await auth.signInWithEmailAndPassword(
+          email: _authData['email']!,
+          password: _authData['password']!,
+        );
+      } else {
+        await auth.createUserWithEmailAndPassword(
+          email: _authData['email']!,
+          password: _authData['password']!,
+        );
+
+        // Speichere vollständigen Namen im Firebase User-Profil
+        await auth.currentUser!.updateDisplayName(
+          '${_authData['firstname']} ${_authData['lastname']}',
+        );
+      }
+
+      // Optional: Weiterleitung nach Login
+      // Navigator.of(context).pushReplacementNamed('/home');
+    } on FirebaseAuthException catch (e) {
+      var message = 'Anmeldung fehlgeschlagen.';
+      if (e.message != null) {
+        message = e.message!;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (err) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ein unerwarteter Fehler ist aufgetreten.'),
+        ),
+      );
+    }
+
+    setState(() {
+      _isLoading = false;
     });
   }
 
@@ -145,7 +187,7 @@ class _AuthCardState extends State<AuthCard> {
                     if (value == null ||
                         value.isEmpty ||
                         !value.contains('@')) {
-                      return 'Invalid email!';
+                      return 'E-Mail ist ungültig!';
                     }
                     return null;
                   },
@@ -159,7 +201,7 @@ class _AuthCardState extends State<AuthCard> {
                   controller: _passwordController,
                   validator: (value) {
                     if (value == null || value.length < 5) {
-                      return 'Password is too short!';
+                      return 'Password ist zu kurz!';
                     }
                     return null;
                   },
@@ -169,13 +211,39 @@ class _AuthCardState extends State<AuthCard> {
                 ),
                 if (_authMode == AuthMode.Signup)
                   TextFormField(
+                    decoration: const InputDecoration(labelText: 'Vorname'),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Bitte gib deinen Vornamen ein';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      _authData['firstname'] = value!;
+                    },
+                  ),
+                if (_authMode == AuthMode.Signup)
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Nachname'),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Bitte gib deinen Nachnamen ein';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      _authData['lastname'] = value!;
+                    },
+                  ),
+                if (_authMode == AuthMode.Signup)
+                  TextFormField(
                     decoration: const InputDecoration(
-                      labelText: 'Confirm Password',
+                      labelText: 'Passwort bestätigen',
                     ),
                     obscureText: true,
                     validator: (value) {
                       if (value != _passwordController.text) {
-                        return 'Passwords do not match!';
+                        return 'Passwort stimmt nicht überein!';
                       }
                       return null;
                     },
