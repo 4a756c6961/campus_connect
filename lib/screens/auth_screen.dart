@@ -196,12 +196,12 @@ class _AuthCardState extends State<AuthCard> {
                   },
                 ),
                 TextFormField(
-                  decoration: const InputDecoration(labelText: 'Password'),
+                  decoration: const InputDecoration(labelText: 'Passwort'),
                   obscureText: true,
                   controller: _passwordController,
                   validator: (value) {
                     if (value == null || value.length < 5) {
-                      return 'Password ist zu kurz!';
+                      return 'Passwort ist zu kurz!';
                     }
                     return null;
                   },
@@ -209,6 +209,18 @@ class _AuthCardState extends State<AuthCard> {
                     _authData['password'] = value!;
                   },
                 ),
+               if (_authMode == AuthMode.Signup)
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Passwort bestätigen'),
+                  obscureText: true,
+                  validator: (value) {
+                  if (value != _passwordController.text) {
+                  return 'Passwörter stimmen nicht überein!';
+                }
+                return null;
+                  },
+              ),
+
                 if (_authMode == AuthMode.Signup)
                   TextFormField(
                     decoration: const InputDecoration(labelText: 'Vorname'),
@@ -235,19 +247,7 @@ class _AuthCardState extends State<AuthCard> {
                       _authData['lastname'] = value!;
                     },
                   ),
-                if (_authMode == AuthMode.Signup)
-                  TextFormField(
-                    decoration: const InputDecoration(
-                      labelText: 'Passwort bestätigen',
-                    ),
-                    obscureText: true,
-                    validator: (value) {
-                      if (value != _passwordController.text) {
-                        return 'Passwort stimmt nicht überein!';
-                      }
-                      return null;
-                    },
-                  ),
+
                 const SizedBox(height: 20),
                 if (_isLoading)
                   const CircularProgressIndicator()
