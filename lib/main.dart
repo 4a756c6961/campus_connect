@@ -9,6 +9,8 @@ void main() {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -23,6 +25,7 @@ class MyApp extends StatelessWidget {
       home: AuthScreen(), // <--- App startet mit diesem Screen
       routes: {
         AuthScreen.routeName: (ctx) => AuthScreen(),
+        HomeScreen.routeName: (ctx) => HomeScreen(),
         // hier kannst du später weitere Screens eintragen
       },
     );

@@ -7,6 +7,8 @@ enum AuthMode { Signup, Login }
 class AuthScreen extends StatelessWidget {
   static const routeName = '/auth';
 
+  const AuthScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     final deviceSize = MediaQuery.of(context).size;
@@ -80,7 +82,7 @@ class AuthScreen extends StatelessWidget {
 }
 
 class AuthCard extends StatefulWidget {
-  const AuthCard({Key? key}) : super(key: key);
+  const AuthCard({super.key});
 
   @override
   State<AuthCard> createState() => _AuthCardState();
@@ -209,17 +211,19 @@ class _AuthCardState extends State<AuthCard> {
                     _authData['password'] = value!;
                   },
                 ),
-               if (_authMode == AuthMode.Signup)
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Passwort bestätigen'),
-                  obscureText: true,
-                  validator: (value) {
-                  if (value != _passwordController.text) {
-                  return 'Passwörter stimmen nicht überein!';
-                }
-                return null;
-                  },
-              ),
+                if (_authMode == AuthMode.Signup)
+                  TextFormField(
+                    decoration: const InputDecoration(
+                      labelText: 'Passwort bestätigen',
+                    ),
+                    obscureText: true,
+                    validator: (value) {
+                      if (value != _passwordController.text) {
+                        return 'Passwörter stimmen nicht überein!';
+                      }
+                      return null;
+                    },
+                  ),
 
                 if (_authMode == AuthMode.Signup)
                   TextFormField(
