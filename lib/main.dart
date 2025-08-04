@@ -22,11 +22,11 @@ class MyApp extends StatelessWidget {
         ).copyWith(secondary: Colors.deepPurple),
         fontFamily: 'Lato',
       ),
-      home: AuthScreen(), // <--- App startet mit diesem Screen
+      home: AuthScreen(), // <--- Start der App mit dem AuthScreen
       routes: {
         AuthScreen.routeName: (ctx) => AuthScreen(),
-        HomeScreen.routeName: (ctx) => HomeScreen(),
-        // hier kannst du später weitere Screens eintragen
+        //HomeScreen.routeName: (ctx) => HomeScreen(),
+        // hier werden weitere Screens eingetragen
       },
     );
   }
