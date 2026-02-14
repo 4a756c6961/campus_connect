@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'screens/auth_screen.dart';
-import 'screens/home_screen.dart';
+
+import 'firebase_options.dart';
 import 'providers/auth.dart';
-import 'screens/home_screen.dart';
+import 'screens/auth_gate.dart';
+import 'screens/auth_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(); // falls Firebase genutzt wird
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -21,17 +22,12 @@ class MyApp extends StatelessWidget {
       providers: [ChangeNotifierProvider<Auth>(create: (_) => Auth())],
       child: MaterialApp(
         title: 'Campus Connect',
-        theme: ThemeData(
-          // Alternativ moderner:
-          // colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
-          primarySwatch: Colors.deepOrange,
-          colorScheme: ColorScheme.fromSwatch(
-            primarySwatch: Colors.deepOrange,
-          ).copyWith(secondary: Colors.deepPurple),
-          fontFamily: 'Lato',
-        ),
-        home: const AuthScreen(), // Start mit AuthScreen
-        routes: {AuthScreen.routeName: (ctx) => const AuthScreen()},
+        theme: ThemeData(primarySwatch: Colors.deepOrange, fontFamily: 'Lato'),
+        home: const AuthGate(),
+        routes: {
+          AuthScreen.routeName: (_) => const AuthScreen(),
+          // HomeScreen.routeName: (_) => const HomeScreen(),  // falls du es nutzt
+        },
       ),
     );
   }

@@ -1,47 +1,60 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Auth with ChangeNotifier {
-  String? _token;
-  DateTime? _expiryDate;
-  String? _userId;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  bool get isLoggedIn => token != null;
+  User? get user => _auth.currentUser;
+  String? get userId => _auth.currentUser?.uid;
+  bool get isLoggedIn => _auth.currentUser != null;
 
-  String? get token {
-    if (_token == null || _expiryDate == null) return null;
-    if (_expiryDate!.isBefore(DateTime.now())) return null;
-    return _token;
-  }
-
-  String? get userId => _userId;
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   Future<void> signup(String email, String password) async {
-    final url = Uri.parse(
-      'https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=DEIN_KEY',
-    );
-
-    final response = await http.post(
-      url,
-      body: json.encode({
-        'email': email,
-        'password': password,
-        'returnSecureToken': true,
-      }),
-    );
-
-    final responseData = json.decode(response.body) as Map<String, dynamic>;
-    if (responseData['error'] != null) {
-      throw Exception(responseData['error']['message']);
+    try {
+      await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      notifyListeners();
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_mapError(e));
     }
+  }
 
-    _token = responseData['idToken']?.toString();
-    _userId = responseData['localId']?.toString();
+  Future<void> login(String email, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      notifyListeners();
+    } on FirebaseAuthException catch (e) {
+      throw Exception(_mapError(e));
+    }
+  }
 
-    final expiresIn = int.tryParse(responseData['expiresIn'].toString()) ?? 0;
-    _expiryDate = DateTime.now().add(Duration(seconds: expiresIn));
-
+  Future<void> logout() async {
+    await _auth.signOut();
     notifyListeners();
+  }
+
+  String _mapError(FirebaseAuthException e) {
+    switch (e.code) {
+      case 'email-already-in-use':
+        return 'Diese E-Mail ist bereits registriert.';
+      case 'invalid-email':
+        return 'Die E-Mail-Adresse ist ungültig.';
+      case 'weak-password':
+        return 'Passwort zu schwach.';
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'E-Mail oder Passwort ist falsch.';
+      case 'too-many-requests':
+        return 'Zu viele Versuche. Bitte später erneut probieren.';
+      default:
+        return 'Auth fehlgeschlagen (${e.code}).';
+    }
   }
 }
