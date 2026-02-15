@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-enum AuthMode { Signup, Login }
+enum AuthMode { signup, login }
 
 class AuthScreen extends StatelessWidget {
   static const routeName = '/auth';
@@ -90,7 +90,7 @@ class AuthCard extends StatefulWidget {
 
 class _AuthCardState extends State<AuthCard> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  AuthMode _authMode = AuthMode.Login;
+  AuthMode _authMode = AuthMode.login;
 
   final Map<String, String> _authData = {
     'email': '',
@@ -104,7 +104,7 @@ class _AuthCardState extends State<AuthCard> {
   void _switchAuthMode() {
     setState(() {
       _authMode =
-          _authMode == AuthMode.Login ? AuthMode.Signup : AuthMode.Login;
+          _authMode == AuthMode.login ? AuthMode.signup : AuthMode.login;
     });
   }
 
@@ -121,7 +121,7 @@ class _AuthCardState extends State<AuthCard> {
     try {
       final auth = FirebaseAuth.instance;
 
-      if (_authMode == AuthMode.Login) {
+      if (_authMode == AuthMode.login) {
         await auth.signInWithEmailAndPassword(
           email: _authData['email']!,
           password: _authData['password']!,
@@ -171,9 +171,9 @@ class _AuthCardState extends State<AuthCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeIn,
-        height: _authMode == AuthMode.Signup ? 320 : 260,
+        height: _authMode == AuthMode.signup ? 320 : 260,
         constraints: BoxConstraints(
-          minHeight: _authMode == AuthMode.Signup ? 320 : 260,
+          minHeight: _authMode == AuthMode.signup ? 320 : 260,
         ),
         width: deviceSize.width * 0.75,
         padding: const EdgeInsets.all(16.0),
@@ -211,7 +211,7 @@ class _AuthCardState extends State<AuthCard> {
                     _authData['password'] = value!;
                   },
                 ),
-                if (_authMode == AuthMode.Signup)
+                if (_authMode == AuthMode.signup)
                   TextFormField(
                     decoration: const InputDecoration(
                       labelText: 'Passwort bestätigen',
@@ -225,7 +225,7 @@ class _AuthCardState extends State<AuthCard> {
                     },
                   ),
 
-                if (_authMode == AuthMode.Signup)
+                if (_authMode == AuthMode.signup)
                   TextFormField(
                     decoration: const InputDecoration(labelText: 'Vorname'),
                     validator: (value) {
@@ -238,7 +238,7 @@ class _AuthCardState extends State<AuthCard> {
                       _authData['firstname'] = value!;
                     },
                   ),
-                if (_authMode == AuthMode.Signup)
+                if (_authMode == AuthMode.signup)
                   TextFormField(
                     decoration: const InputDecoration(labelText: 'Nachname'),
                     validator: (value) {
@@ -271,7 +271,7 @@ class _AuthCardState extends State<AuthCard> {
                       ),
                     ),
                     child: Text(
-                      _authMode == AuthMode.Login ? 'LOGIN' : 'SIGN UP',
+                      _authMode == AuthMode.login ? 'LOGIN' : 'SIGN UP',
                     ),
                   ),
                 TextButton(
@@ -284,7 +284,7 @@ class _AuthCardState extends State<AuthCard> {
                     foregroundColor: Theme.of(context).primaryColor,
                   ),
                   child: Text(
-                    '${_authMode == AuthMode.Login ? 'SIGNUP' : 'LOGIN'} INSTEAD',
+                    '${_authMode == AuthMode.login ? 'SIGNUP' : 'LOGIN'} INSTEAD',
                   ),
                 ),
               ],
