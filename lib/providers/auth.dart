@@ -4,9 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 class Auth with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  bool get isLoggedIn => _auth.currentUser != null;
   User? get user => _auth.currentUser;
   String? get userId => _auth.currentUser?.uid;
-  bool get isLoggedIn => _auth.currentUser != null;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
@@ -51,8 +51,6 @@ class Auth with ChangeNotifier {
       case 'wrong-password':
       case 'invalid-credential':
         return 'E-Mail oder Passwort ist falsch.';
-      case 'too-many-requests':
-        return 'Zu viele Versuche. Bitte später erneut probieren.';
       default:
         return 'Auth fehlgeschlagen (${e.code}).';
     }
