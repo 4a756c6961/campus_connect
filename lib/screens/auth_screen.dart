@@ -57,13 +57,12 @@ class AuthScreen extends StatelessWidget {
                       ),
                       child: Text(
                         'Campus Connect',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.headlineMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          fontFamily: 'Anton',
-                          fontSize: 50,
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              fontFamily: 'Anton',
+                              fontSize: 50,
+                            ),
                       ),
                     ),
                   ),
@@ -103,8 +102,9 @@ class _AuthCardState extends State<AuthCard> {
   final TextEditingController _passwordController = TextEditingController();
   void _switchAuthMode() {
     setState(() {
-      _authMode =
-          _authMode == AuthMode.login ? AuthMode.signup : AuthMode.login;
+      _authMode = _authMode == AuthMode.login
+          ? AuthMode.signup
+          : AuthMode.login;
     });
   }
 
@@ -260,8 +260,9 @@ class _AuthCardState extends State<AuthCard> {
                     onPressed: _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor:
-                          Theme.of(context).primaryTextTheme.labelLarge?.color,
+                      foregroundColor: Theme.of(
+                        context,
+                      ).primaryTextTheme.labelLarge?.color,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 30.0,
                         vertical: 8.0,
