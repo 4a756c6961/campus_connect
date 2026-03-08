@@ -80,7 +80,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 final docs = snapshot.data?.docs ?? [];
                 if (docs.isEmpty) {
-                  return const Center(child: Text('Noch keine Posts 🤭'));
+                  return const Center(
+                    child: Text('Dein Feed sieht noch leer aus 🤭'),
+                  );
                 }
 
                 return ListView.builder(
