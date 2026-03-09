@@ -18,7 +18,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _sendPost() async {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bitte gib einen Text ein.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
