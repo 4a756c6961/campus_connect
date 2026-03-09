@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
@@ -92,8 +93,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     final data = docs[i].data() as Map<String, dynamic>;
                     final text = (data['text'] ?? '').toString();
                     final email = (data['userEmail'] ?? '').toString();
-                    final ts = data['createdAt'];
-                    final time = ts is Timestamp ? ts.toDate() : null;
+                    final createdAt = data['createdAt'] as Timestamp?;
+                    final formattedDate =
+                        createdAt != null
+                            ? DateFormat(
+                              'dd.MM.yyyy, HH:mm',
+                            ).format(createdAt.toDate())
+                            : 'wird geladen...';
 
                     return Card(
                       child: ListTile(
@@ -101,7 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         subtitle: Text(
                           [
                             if (email.isNotEmpty) email,
-                            if (time != null) time.toString(),
+                            if (formattedDate != null) formattedDate.toString(),
                           ].join(' • '),
                         ),
                       ),
