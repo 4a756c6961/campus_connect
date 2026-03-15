@@ -39,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
         'createdAt': FieldValue.serverTimestamp(),
         'userId': user.uid,
         'userEmail': user.email ?? '',
+        'userName': user.displayName ?? '',
       });
 
       _controller.clear();
@@ -101,6 +102,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     final data = docs[i].data() as Map<String, dynamic>;
                     final text = (data['text'] ?? '').toString();
                     final email = (data['userEmail'] ?? '').toString();
+                    final userName = (data['userName'] ?? '').toString();
+                    final author = userName.isNotEmpty ? userName : email;
                     final createdAt = data['createdAt'] as Timestamp?;
                     final formattedDate =
                         createdAt != null
@@ -114,7 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         title: Text(text),
                         subtitle: Text(
                           [
-                            if (email.isNotEmpty) email,
+                            if (author.isNotEmpty) author,
                             if (formattedDate != null) formattedDate.toString(),
                           ].join(' • '),
                         ),
