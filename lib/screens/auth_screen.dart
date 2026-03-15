@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum AuthMode { signup, login }
 
@@ -57,12 +58,13 @@ class AuthScreen extends StatelessWidget {
                       ),
                       child: Text(
                         'Campus Connect',
-                        style: Theme.of(context).textTheme.headlineMedium
-                            ?.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              fontFamily: 'Anton',
-                              fontSize: 50,
-                            ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.headlineMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontFamily: 'Anton',
+                          fontSize: 50,
+                        ),
                       ),
                     ),
                   ),
@@ -94,17 +96,16 @@ class _AuthCardState extends State<AuthCard> {
   final Map<String, String> _authData = {
     'email': '',
     'password': '',
-    'firstname': '',
-    'lastname': '',
+    'firstName': '',
+    'lastName': '',
   };
 
   bool _isLoading = false;
   final TextEditingController _passwordController = TextEditingController();
   void _switchAuthMode() {
     setState(() {
-      _authMode = _authMode == AuthMode.login
-          ? AuthMode.signup
-          : AuthMode.login;
+      _authMode =
+          _authMode == AuthMode.login ? AuthMode.signup : AuthMode.login;
     });
   }
 
@@ -123,23 +124,35 @@ class _AuthCardState extends State<AuthCard> {
 
       if (_authMode == AuthMode.login) {
         await auth.signInWithEmailAndPassword(
-          email: _authData['email']!,
+          email: _authData['email']!.trim(),
           password: _authData['password']!,
         );
       } else {
-        await auth.createUserWithEmailAndPassword(
-          email: _authData['email']!,
-          password: _authData['password']!,
+        final email = _authData['email']!.trim();
+        final password = _authData['password']!;
+        final firstName = _authData['firstName']!.trim();
+        final lastName = _authData['lastName']!.trim();
+        final fullName = '$firstName $lastName'.trim();
+
+        final userCredential = await auth.createUserWithEmailAndPassword(
+          email: email,
+          password: password,
         );
 
-        // Speichere vollständigen Namen im Firebase User-Profil
-        await auth.currentUser!.updateDisplayName(
-          '${_authData['firstname']} ${_authData['lastname']}',
-        );
+        await userCredential.user!.updateDisplayName(fullName);
+        await userCredential.user!.reload();
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+              'email': email,
+              'firstName': firstName,
+              'lastName': lastName,
+              'displayName': fullName,
+              'createdAt': FieldValue.serverTimestamp(),
+            });
       }
-
-      // Optional: Weiterleitung nach Login
-      // Navigator.of(context).pushReplacementNamed('/home');
     } on FirebaseAuthException catch (e) {
       var message = 'Anmeldung fehlgeschlagen.';
       if (e.message != null) {
@@ -156,9 +169,11 @@ class _AuthCardState extends State<AuthCard> {
       );
     }
 
-    setState(() {
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -235,7 +250,7 @@ class _AuthCardState extends State<AuthCard> {
                       return null;
                     },
                     onSaved: (value) {
-                      _authData['firstname'] = value!;
+                      _authData['firstName'] = value!;
                     },
                   ),
                 if (_authMode == AuthMode.signup)
@@ -248,7 +263,7 @@ class _AuthCardState extends State<AuthCard> {
                       return null;
                     },
                     onSaved: (value) {
-                      _authData['lastname'] = value!;
+                      _authData['lastName'] = value!;
                     },
                   ),
 
@@ -260,9 +275,8 @@ class _AuthCardState extends State<AuthCard> {
                     onPressed: _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Theme.of(
-                        context,
-                      ).primaryTextTheme.labelLarge?.color,
+                      foregroundColor:
+                          Theme.of(context).primaryTextTheme.labelLarge?.color,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 30.0,
                         vertical: 8.0,
