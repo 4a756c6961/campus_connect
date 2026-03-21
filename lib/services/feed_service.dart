@@ -35,12 +35,14 @@ class FeedService {
       throw Exception('Kein eingeloggter Benutzer gefunden.');
     }
 
+    final displayName = await _getDisplayName(user);
+
     await _firestore.collection('posts').add({
       'text': text,
       'createdAt': FieldValue.serverTimestamp(),
       'userId': user.uid,
       'userEmail': user.email ?? '',
-      'userName': user.displayName ?? '',
+      'userName': displayName,
     });
   }
 
@@ -97,9 +99,13 @@ class FeedService {
     final userData = userDoc.data();
 
     final username = userData?['username']?.toString().trim();
-
     if (username != null && username.isNotEmpty) {
       return username;
+    }
+
+    final authDisplayName = user.displayName?.trim();
+    if (authDisplayName != null && authDisplayName.isNotEmpty) {
+      return authDisplayName;
     }
 
     return user.email ?? 'Unbekannt';
