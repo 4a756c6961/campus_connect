@@ -2,67 +2,85 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
-class HomeScreen extends StatefulWidget {
+import 'package:campus_connect/providers/feed_provider.dart';
+import 'package:campus_connect/screens/feed_comments_screen.dart';
+import 'package:campus_connect/services/feed_service.dart';
+import 'package:campus_connect/widgets/post_card.dart';
+import 'package:campus_connect/widgets/post_input.dart';
+
+class HomeScreen extends StatelessWidget {
   static const routeName = '/home';
 
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => FeedProvider(FeedService()),
+      child: const _HomeScreenView(),
+    );
+  }
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  final _controller = TextEditingController();
-  bool _sending = false;
+class _HomeScreenView extends StatelessWidget {
+  const _HomeScreenView();
 
-  Future<void> _sendPost() async {
-    final text = _controller.text.trim();
-    if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bitte gib einen Text ein.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
+  static final FeedService _feedService = FeedService();
+  String _formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return 'wird geladen...';
+    return DateFormat('dd.MM.yyyy, HH:mm').format(timestamp.toDate());
+  }
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+  Future<void> _handleSendPost(BuildContext context) async {
+    final message = await context.read<FeedProvider>().sendPost();
 
-    setState(() => _sending = true);
+    if (!context.mounted) return;
 
-    try {
-      await FirebaseFirestore.instance.collection('posts').add({
-        'text': text,
-        'createdAt': FieldValue.serverTimestamp(),
-        'userId': user.uid,
-        'userEmail': user.email ?? '',
-        'userName': user.displayName ?? '',
-      });
-
-      _controller.clear();
-    } catch (e) {
+    if (message != null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Fehler beim Posten: $e')));
-    } finally {
-      if (mounted) setState(() => _sending = false);
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Future<void> _handleToggleLike(BuildContext context, String postId) async {
+    final message = await context.read<FeedProvider>().toggleLike(postId);
+
+    if (!context.mounted) return;
+
+    if (message != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
+  void _openComments(
+    BuildContext context, {
+    required String postId,
+    required String postText,
+    required String authorName,
+    required Timestamp? createdAt,
+  }) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (_) => FeedCommentsScreen(
+              postId: postId,
+              postText: postText,
+              authorName: authorName,
+              createdAt: createdAt,
+            ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final postsQuery = FirebaseFirestore.instance
-        .collection('posts')
-        .orderBy('createdAt', descending: true);
+    final feedProvider = context.watch<FeedProvider>();
+    final postsStream = feedProvider.postsStream;
 
     return Scaffold(
       appBar: AppBar(
@@ -76,19 +94,20 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Column(
         children: [
-          // Feed
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: postsQuery.snapshots(),
+              stream: postsStream,
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(child: Text('Fehler: ${snapshot.error}'));
                 }
+
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
                 final docs = snapshot.data?.docs ?? [];
+
                 if (docs.isEmpty) {
                   return const Center(
                     child: Text('Dein Feed sieht noch leer aus 🤭'),
@@ -99,69 +118,72 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.all(12),
                   itemCount: docs.length,
                   itemBuilder: (context, i) {
-                    final data = docs[i].data() as Map<String, dynamic>;
+                    final doc = docs[i];
+                    final data = doc.data() as Map<String, dynamic>;
+
                     final text = (data['text'] ?? '').toString();
                     final email = (data['userEmail'] ?? '').toString();
                     final userName = (data['userName'] ?? '').toString();
-                    final author = userName.isNotEmpty ? userName : email;
-                    final createdAt = data['createdAt'] as Timestamp?;
-                    final formattedDate =
-                        createdAt != null
-                            ? DateFormat(
-                              'dd.MM.yyyy, HH:mm',
-                            ).format(createdAt.toDate())
-                            : 'wird geladen...';
+                    final author =
+                        userName.isNotEmpty
+                            ? userName
+                            : (email.isNotEmpty ? email : 'Unbekannt');
 
-                    return Card(
-                      child: ListTile(
-                        title: Text(text),
-                        subtitle: Text(
-                          [
-                            if (author.isNotEmpty) author,
-                            if (formattedDate != null) formattedDate.toString(),
-                          ].join(' • '),
-                        ),
-                      ),
+                    final createdAt = data['createdAt'] as Timestamp?;
+                    final formattedDate = _formatTimestamp(createdAt);
+
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: _feedService.getLikesStream(doc.id),
+                      builder: (context, likeSnapshot) {
+                        final likeDocs = likeSnapshot.data?.docs ?? [];
+                        final currentUser = FirebaseAuth.instance.currentUser;
+                        final likeCount = likeDocs.length;
+                        final hasLiked =
+                            currentUser != null &&
+                            likeDocs.any(
+                              (likeDoc) => likeDoc.id == currentUser.uid,
+                            );
+
+                        return StreamBuilder<QuerySnapshot>(
+                          stream: _feedService.getCommentsStream(doc.id),
+                          builder: (context, commentSnapshot) {
+                            final liveCommentCount =
+                                commentSnapshot.data?.docs.length ?? 0;
+
+                            return PostCard(
+                              postId: doc.id,
+                              author: author,
+                              text: text,
+                              formattedDate: formattedDate,
+                              createdAt: createdAt,
+                              likeCount: likeCount,
+                              commentCount: liveCommentCount,
+                              hasLiked: hasLiked,
+                              onToggleLike:
+                                  () => _handleToggleLike(context, doc.id),
+                              onOpenComments: () {
+                                _openComments(
+                                  context,
+                                  postId: doc.id,
+                                  postText: text,
+                                  authorName: author,
+                                  createdAt: createdAt,
+                                );
+                              },
+                            );
+                          },
+                        );
+                      },
                     );
                   },
                 );
               },
             ),
           ),
-
-          // Composer
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendPost(),
-                      decoration: const InputDecoration(
-                        hintText: 'Schreib was in den Feed…',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: _sending ? null : _sendPost,
-                    icon:
-                        _sending
-                            ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : const Icon(Icons.send),
-                  ),
-                ],
-              ),
-            ),
+          PostInput(
+            controller: feedProvider.controller,
+            isSending: feedProvider.isSending,
+            onSend: () => _handleSendPost(context),
           ),
         ],
       ),
