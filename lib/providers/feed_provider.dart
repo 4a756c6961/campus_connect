@@ -1,16 +1,14 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:campus_connect/services/feed_service.dart';
 
-class FeedProvider extends ChangeNotifier {
+class FeedProvider with ChangeNotifier {
   final FeedService _feedService;
 
   FeedProvider(this._feedService);
 
   final TextEditingController controller = TextEditingController();
-
-  bool _isSending = false;
-  bool get isSending => _isSending;
+  bool isSending = false;
 
   Stream<QuerySnapshot> get postsStream => _feedService.getPostsStream();
 
@@ -21,17 +19,18 @@ class FeedProvider extends ChangeNotifier {
       return 'Bitte gib einen Text ein.';
     }
 
-    _isSending = true;
-    notifyListeners();
-
     try {
+      isSending = true;
+      notifyListeners();
+
       await _feedService.addPost(text);
       controller.clear();
+
       return null;
     } catch (e) {
-      return 'Fehler beim Posten: $e';
+      return 'Fehler beim Senden: $e';
     } finally {
-      _isSending = false;
+      isSending = false;
       notifyListeners();
     }
   }
@@ -43,6 +42,14 @@ class FeedProvider extends ChangeNotifier {
     } catch (e) {
       return 'Fehler beim Liken: $e';
     }
+  }
+
+  Future<void> updatePost(String postId, String newText) {
+    return _feedService.updatePost(postId: postId, newText: newText);
+  }
+
+  Future<void> deletePost(String postId) {
+    return _feedService.deletePost(postId);
   }
 
   @override

@@ -35,14 +35,17 @@ class FeedService {
       throw Exception('Kein eingeloggter Benutzer gefunden.');
     }
 
-    final displayName = await _getDisplayName(user);
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      throw Exception('Der Beitrag darf nicht leer sein.');
+    }
 
     await _firestore.collection('posts').add({
-      'text': text,
-      'createdAt': FieldValue.serverTimestamp(),
+      'text': trimmed,
       'userId': user.uid,
-      'userEmail': user.email ?? '',
-      'userName': displayName,
+      'userEmail': user.email,
+      'createdAt': FieldValue.serverTimestamp(),
+      'editedAt': null,
     });
   }
 
@@ -55,17 +58,19 @@ class FeedService {
       throw Exception('Kein eingeloggter Benutzer gefunden.');
     }
 
-    final displayName = await _getDisplayName(user);
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      throw Exception('Der Kommentar darf nicht leer sein.');
+    }
 
     await _firestore
         .collection('posts')
         .doc(postId)
         .collection('comments')
         .add({
-          'text': text,
+          'text': trimmed,
           'userId': user.uid,
-          'authorId': user.uid,
-          'authorName': displayName,
+          'userEmail': user.email,
           'createdAt': FieldValue.serverTimestamp(),
         });
   }
@@ -94,20 +99,71 @@ class FeedService {
     }
   }
 
-  Future<String> _getDisplayName(User user) async {
-    final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    final userData = userDoc.data();
-
-    final username = userData?['username']?.toString().trim();
-    if (username != null && username.isNotEmpty) {
-      return username;
+  Future<void> updatePost({
+    required String postId,
+    required String newText,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('Kein eingeloggter Benutzer gefunden.');
     }
 
-    final authDisplayName = user.displayName?.trim();
-    if (authDisplayName != null && authDisplayName.isNotEmpty) {
-      return authDisplayName;
+    final trimmed = newText.trim();
+    if (trimmed.isEmpty) {
+      throw Exception('Der Beitrag darf nicht leer sein.');
     }
 
-    return user.email ?? 'Unbekannt';
+    final postRef = _firestore.collection('posts').doc(postId);
+    final postSnap = await postRef.get();
+
+    if (!postSnap.exists) {
+      throw Exception('Beitrag wurde nicht gefunden.');
+    }
+
+    final data = postSnap.data();
+    if (data == null || data['userId'] != user.uid) {
+      throw Exception('Du darfst nur deine eigenen Beiträge bearbeiten.');
+    }
+
+    await postRef.update({
+      'text': trimmed,
+      'editedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deletePost(String postId) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('Kein eingeloggter Benutzer gefunden.');
+    }
+
+    final postRef = _firestore.collection('posts').doc(postId);
+    final postSnap = await postRef.get();
+
+    if (!postSnap.exists) {
+      throw Exception('Beitrag wurde nicht gefunden.');
+    }
+
+    final data = postSnap.data();
+    if (data == null || data['userId'] != user.uid) {
+      throw Exception('Du darfst nur deine eigenen Beiträge löschen.');
+    }
+
+    final commentsSnap = await postRef.collection('comments').get();
+    final likesSnap = await postRef.collection('likes').get();
+
+    final batch = _firestore.batch();
+
+    for (final doc in commentsSnap.docs) {
+      batch.delete(doc.reference);
+    }
+
+    for (final doc in likesSnap.docs) {
+      batch.delete(doc.reference);
+    }
+
+    batch.delete(postRef);
+
+    await batch.commit();
   }
 }

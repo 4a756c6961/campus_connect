@@ -28,6 +28,7 @@ class _HomeScreenView extends StatelessWidget {
   const _HomeScreenView();
 
   static final FeedService _feedService = FeedService();
+
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'wird geladen...';
     return DateFormat('dd.MM.yyyy, HH:mm').format(timestamp.toDate());
@@ -124,12 +125,21 @@ class _HomeScreenView extends StatelessWidget {
                     final text = (data['text'] ?? '').toString();
                     final email = (data['userEmail'] ?? '').toString();
                     final userName = (data['userName'] ?? '').toString();
+                    final userId = (data['userId'] ?? '').toString();
+
                     final author =
                         userName.isNotEmpty
                             ? userName
                             : (email.isNotEmpty ? email : 'Unbekannt');
 
-                    final createdAt = data['createdAt'] as Timestamp?;
+                    final createdAtRaw = data['createdAt'];
+                    final createdAt =
+                        createdAtRaw is Timestamp ? createdAtRaw : null;
+
+                    final editedAtRaw = data['editedAt'];
+                    final editedAt =
+                        editedAtRaw is Timestamp ? editedAtRaw.toDate() : null;
+
                     final formattedDate = _formatTimestamp(createdAt);
 
                     return StreamBuilder<QuerySnapshot>(
@@ -152,13 +162,14 @@ class _HomeScreenView extends StatelessWidget {
 
                             return PostCard(
                               postId: doc.id,
-                              author: author,
                               text: text,
+                              userId: userId,
+                              authorName: author,
                               formattedDate: formattedDate,
-                              createdAt: createdAt,
                               likeCount: likeCount,
                               commentCount: liveCommentCount,
                               hasLiked: hasLiked,
+                              editedAt: editedAt,
                               onToggleLike:
                                   () => _handleToggleLike(context, doc.id),
                               onOpenComments: () {
