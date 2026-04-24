@@ -1,16 +1,37 @@
-# campus_connect
+# Campus Connect
 
-A new Flutter project.
+Campus Connect ist eine mobile App auf Basis von Flutter und Firebase, die als kleines soziales Netzwerk für Studierende gedacht ist. Nutzerinnen und Nutzer können Beiträge veröffentlichen, Beiträge anderer liken und kommentieren.
 
-## Getting Started
+## Ziel des Projekts
 
-This project is a starting point for a Flutter application.
+Ziel von Campus Connect ist es, eine einfache Plattform zu schaffen, auf der sich Studierende digital austauschen und vernetzen können.
 
-A few resources to get you started if this is your first Flutter project:
+Die App dient gleichzeitig auch als Lern- und Entwicklungsprojekt, um den Umgang mit Flutter, Firebase, Firestore, Authentifizierung und einer sauberen Projektstruktur zu vertiefen.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Verwendete Technologien
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Flutter
+- Dart
+- Firebase Authentication
+- Cloud Firestore
+- Provider
+
+## Aktueller Funktionsumfang
+
+- Registrierung und Login mit Firebase Authentication
+- Anzeigen eines Feeds mit Beiträgen
+- Erstellen neuer Beiträge
+- Liken und Entliken von Beiträgen
+- Kommentieren von Beiträgen
+- Live-Aktualisierung über Firestore-Streams
+
+## Projektstruktur
+
+```text
+lib/
+├─ main.dart
+├─ screens/
+├─ widgets/
+├─ services/
+├─ providers/
+└─ models/
