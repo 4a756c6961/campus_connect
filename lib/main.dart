@@ -6,6 +6,7 @@ import 'firebase_options.dart';
 import 'providers/auth.dart';
 import 'screens/auth_gate.dart';
 import 'screens/auth_screen.dart';
+import 'screens/main_navigation_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,7 +27,7 @@ class MyApp extends StatelessWidget {
         home: const AuthGate(),
         routes: {
           AuthScreen.routeName: (_) => const AuthScreen(),
-          // HomeScreen.routeName: (_) => const HomeScreen(),  // falls du es nutzt
+          MainNavigationScreen.routeName: (_) => const MainNavigationScreen(),
         },
       ),
     );

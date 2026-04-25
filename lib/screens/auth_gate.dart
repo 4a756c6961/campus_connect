@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth.dart';
 import 'auth_screen.dart';
-import 'home_screen.dart';
+import 'main_navigation_screen.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -21,7 +21,9 @@ class AuthGate extends StatelessWidget {
         }
 
         // Eingeloggt -> Home, sonst -> AuthScreen
-        return snapshot.hasData ? const HomeScreen() : const AuthScreen();
+        return snapshot.hasData
+            ? const MainNavigationScreen()
+            : const AuthScreen();
       },
     );
   }
