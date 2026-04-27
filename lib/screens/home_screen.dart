@@ -126,6 +126,7 @@ class _HomeScreenView extends StatelessWidget {
                     final email = (data['userEmail'] ?? '').toString();
                     final userName = (data['userName'] ?? '').toString();
                     final userId = (data['userId'] ?? '').toString();
+                    final photoUrl = (data['photoUrl'] ?? '').toString();
 
                     final author =
                         userName.isNotEmpty
@@ -165,6 +166,7 @@ class _HomeScreenView extends StatelessWidget {
                               text: text,
                               userId: userId,
                               authorName: author,
+                              photoUrl: photoUrl,
                               formattedDate: formattedDate,
                               likeCount: likeCount,
                               commentCount: liveCommentCount,

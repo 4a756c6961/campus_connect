@@ -35,6 +35,12 @@ class FeedService {
       throw Exception('Kein eingeloggter Benutzer gefunden.');
     }
 
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final userData = userDoc.data();
+
+    final displayName =
+        (userData?['displayName'] ?? user.displayName ?? '').toString();
+    final photoUrl = (userData?['photoUrl'] ?? '').toString();
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
       throw Exception('Der Beitrag darf nicht leer sein.');
@@ -44,6 +50,8 @@ class FeedService {
       'text': trimmed,
       'userId': user.uid,
       'userEmail': user.email,
+      'userName': displayName,
+      'photoUrl': photoUrl,
       'createdAt': FieldValue.serverTimestamp(),
       'editedAt': null,
     });

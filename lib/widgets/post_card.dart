@@ -1,6 +1,8 @@
+import 'package:characters/characters.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import 'package:campus_connect/providers/feed_provider.dart';
 
 class PostCard extends StatelessWidget {
@@ -8,6 +10,7 @@ class PostCard extends StatelessWidget {
   final String text;
   final String userId;
   final String authorName;
+  final String photoUrl;
   final String formattedDate;
   final int likeCount;
   final int commentCount;
@@ -22,6 +25,7 @@ class PostCard extends StatelessWidget {
     required this.text,
     required this.userId,
     required this.authorName,
+    required this.photoUrl,
     required this.formattedDate,
     required this.likeCount,
     required this.commentCount,
@@ -36,6 +40,11 @@ class PostCard extends StatelessWidget {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isOwner = currentUser?.uid == userId;
 
+    final initial =
+        authorName.trim().isNotEmpty
+            ? authorName.trim().characters.first.toUpperCase()
+            : '?';
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Padding(
@@ -46,12 +55,35 @@ class PostCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundImage:
+                      photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                  child: photoUrl.isEmpty ? Text(initial) : null,
+                ),
+
+                const SizedBox(width: 10),
+
                 Expanded(
-                  child: Text(
-                    authorName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        authorName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        formattedDate,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+
                 if (isOwner)
                   PopupMenuButton<String>(
                     onSelected: (value) async {
@@ -75,16 +107,11 @@ class PostCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              formattedDate,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).textTheme.bodySmall?.color,
-              ),
-            ),
+
             const SizedBox(height: 8),
+
             Text(text),
+
             if (editedAt != null) ...[
               const SizedBox(height: 6),
               const Text(
@@ -92,7 +119,9 @@ class PostCard extends StatelessWidget {
                 style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
               ),
             ],
+
             const SizedBox(height: 12),
+
             Row(
               children: [
                 IconButton(
