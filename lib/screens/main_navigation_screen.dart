@@ -14,10 +14,7 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
-    HomeScreen(),
-    /*ProfilScreen(),*/
-  ];
+  final List<Widget> _pages = const [HomeScreen(), ProfilScreen()];
 
   void _onItemTapped(int index) {
     setState(() {
