@@ -35,16 +35,13 @@ class FeedService {
       throw Exception('Kein eingeloggter Benutzer gefunden.');
     }
 
-    final userDoc = await _firestore.collection('users').doc(user.uid).get();
-    final userData = userDoc.data();
-
-    final displayName =
-        (userData?['displayName'] ?? user.displayName ?? '').toString();
-    final photoUrl = (userData?['photoUrl'] ?? '').toString();
     final trimmed = text.trim();
     if (trimmed.isEmpty) {
       throw Exception('Der Beitrag darf nicht leer sein.');
     }
+
+    final displayName = await _getDisplayName(user);
+    final photoUrl = await _getPhotoUrl(user);
 
     await _firestore.collection('posts').add({
       'text': trimmed,
@@ -71,6 +68,9 @@ class FeedService {
       throw Exception('Der Kommentar darf nicht leer sein.');
     }
 
+    final displayName = await _getDisplayName(user);
+    final photoUrl = await _getPhotoUrl(user);
+
     await _firestore
         .collection('posts')
         .doc(postId)
@@ -79,6 +79,8 @@ class FeedService {
           'text': trimmed,
           'userId': user.uid,
           'userEmail': user.email,
+          'authorName': displayName,
+          'photoUrl': photoUrl,
           'createdAt': FieldValue.serverTimestamp(),
         });
   }
@@ -173,5 +175,57 @@ class FeedService {
     batch.delete(postRef);
 
     await batch.commit();
+  }
+
+  Future<String> _getDisplayName(User user) async {
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final userData = userDoc.data();
+
+    final firestoreDisplayName =
+        (userData?['displayName'] ??
+                userData?['userName'] ??
+                userData?['username'] ??
+                userData?['name'] ??
+                '')
+            .toString()
+            .trim();
+
+    if (firestoreDisplayName.isNotEmpty) {
+      return firestoreDisplayName;
+    }
+
+    final authDisplayName = (user.displayName ?? '').trim();
+
+    if (authDisplayName.isNotEmpty) {
+      return authDisplayName;
+    }
+
+    final email = (user.email ?? '').trim();
+
+    if (email.isNotEmpty) {
+      return email;
+    }
+
+    return 'Unbekannt';
+  }
+
+  Future<String> _getPhotoUrl(User user) async {
+    final userDoc = await _firestore.collection('users').doc(user.uid).get();
+    final userData = userDoc.data();
+
+    final firestorePhotoUrl =
+        (userData?['photoUrl'] ??
+                userData?['profileImageUrl'] ??
+                userData?['imageUrl'] ??
+                userData?['avatarUrl'] ??
+                '')
+            .toString()
+            .trim();
+
+    if (firestorePhotoUrl.isNotEmpty) {
+      return firestorePhotoUrl;
+    }
+
+    return user.photoURL ?? '';
   }
 }

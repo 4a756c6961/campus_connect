@@ -116,11 +116,14 @@ class _FeedCommentsView extends StatelessWidget {
                         (commentData['authorName'] ?? 'Unbekannt').toString();
                     final commentCreatedAt =
                         commentData['createdAt'] as Timestamp?;
+                    final commentPhotoUrl =
+                        (commentData['photoUrl'] ?? '').toString();
 
                     return CommentCard(
                       authorName: commentAuthor,
                       commentText: commentText,
                       formattedDate: _formatTimestamp(commentCreatedAt),
+                      photoUrl: commentPhotoUrl,
                     );
                   },
                 );
