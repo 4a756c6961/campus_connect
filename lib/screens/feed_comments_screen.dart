@@ -13,6 +13,7 @@ class FeedCommentsScreen extends StatelessWidget {
   final String postId;
   final String postText;
   final String authorName;
+  final String authorPhotoUrl;
   final Timestamp? createdAt;
 
   const FeedCommentsScreen({
@@ -20,6 +21,7 @@ class FeedCommentsScreen extends StatelessWidget {
     required this.postId,
     required this.postText,
     required this.authorName,
+    required this.authorPhotoUrl,
     required this.createdAt,
   });
 
@@ -31,6 +33,7 @@ class FeedCommentsScreen extends StatelessWidget {
         postId: postId,
         postText: postText,
         authorName: authorName,
+        authorPhotoUrl: authorPhotoUrl,
         createdAt: createdAt,
       ),
     );
@@ -41,12 +44,14 @@ class _FeedCommentsView extends StatelessWidget {
   final String postId;
   final String postText;
   final String authorName;
+  final String authorPhotoUrl;
   final Timestamp? createdAt;
 
   const _FeedCommentsView({
     required this.postId,
     required this.postText,
     required this.authorName,
+    required this.authorPhotoUrl,
     required this.createdAt,
   });
 
@@ -79,6 +84,7 @@ class _FeedCommentsView extends StatelessWidget {
         children: [
           PostPreviewCard(
             authorName: authorName,
+            authorPhotoUrl: authorPhotoUrl,
             formattedDate: _formatTimestamp(createdAt),
             postText: postText,
           ),

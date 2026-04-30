@@ -63,6 +63,7 @@ class _HomeScreenView extends StatelessWidget {
     required String postId,
     required String postText,
     required String authorName,
+    required String authorPhotoUrl,
     required Timestamp? createdAt,
   }) {
     Navigator.of(context).push(
@@ -72,6 +73,7 @@ class _HomeScreenView extends StatelessWidget {
               postId: postId,
               postText: postText,
               authorName: authorName,
+              authorPhotoUrl: authorPhotoUrl,
               createdAt: createdAt,
             ),
       ),
@@ -131,7 +133,9 @@ class _HomeScreenView extends StatelessWidget {
                     final author =
                         userName.isNotEmpty
                             ? userName
-                            : (email.isNotEmpty ? email : 'Unbekannt');
+                            : email.isNotEmpty
+                            ? email
+                            : 'Unbekannt';
 
                     final createdAtRaw = data['createdAt'];
                     final createdAt =
@@ -148,6 +152,7 @@ class _HomeScreenView extends StatelessWidget {
                       builder: (context, likeSnapshot) {
                         final likeDocs = likeSnapshot.data?.docs ?? [];
                         final currentUser = FirebaseAuth.instance.currentUser;
+
                         final likeCount = likeDocs.length;
                         final hasLiked =
                             currentUser != null &&
@@ -180,6 +185,7 @@ class _HomeScreenView extends StatelessWidget {
                                   postId: doc.id,
                                   postText: text,
                                   authorName: author,
+                                  authorPhotoUrl: photoUrl,
                                   createdAt: createdAt,
                                 );
                               },
