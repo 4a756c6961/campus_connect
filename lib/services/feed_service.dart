@@ -228,4 +228,50 @@ class FeedService {
 
     return user.photoURL ?? '';
   }
+
+  Future<void> updateComment({
+    required String postId,
+    required String commentId,
+    required String text,
+  }) async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw Exception('Kein eingeloggter Benutzer gefunden.');
+    }
+
+    final trimmedText = text.trim();
+
+    if (trimmedText.isEmpty) {
+      throw Exception('Der Kommentar darf nicht leer sein.');
+    }
+
+    await _firestore
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .update({
+          'text': trimmedText,
+          'editedAt': FieldValue.serverTimestamp(),
+        });
+  }
+
+  Future<void> deleteComment({
+    required String postId,
+    required String commentId,
+  }) async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw Exception('Kein eingeloggter Benutzer gefunden.');
+    }
+
+    await _firestore
+        .collection('posts')
+        .doc(postId)
+        .collection('comments')
+        .doc(commentId)
+        .delete();
+  }
 }
