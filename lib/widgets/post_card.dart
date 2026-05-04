@@ -17,6 +17,7 @@ class PostCard extends StatelessWidget {
   final bool hasLiked;
   final VoidCallback onToggleLike;
   final VoidCallback onOpenComments;
+  final VoidCallback? onAuthorTap;
   final DateTime? editedAt;
 
   const PostCard({
@@ -32,6 +33,7 @@ class PostCard extends StatelessWidget {
     required this.hasLiked,
     required this.onToggleLike,
     required this.onOpenComments,
+    this.onAuthorTap,
     this.editedAt,
   });
 
@@ -39,6 +41,8 @@ class PostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isOwner = currentUser?.uid == userId;
+
+    final hasPhoto = photoUrl.trim().isNotEmpty;
 
     final initial =
         authorName.trim().isNotEmpty
@@ -55,11 +59,14 @@ class PostCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundImage:
-                      photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                  child: photoUrl.isEmpty ? Text(initial) : null,
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onAuthorTap,
+                  child: CircleAvatar(
+                    backgroundImage:
+                        hasPhoto ? NetworkImage(photoUrl.trim()) : null,
+                    child: hasPhoto ? null : Text(initial),
+                  ),
                 ),
 
                 const SizedBox(width: 10),
@@ -68,17 +75,18 @@ class PostCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        authorName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onAuthorTap,
+                        child: Text(
+                          authorName,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         formattedDate,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).textTheme.bodySmall?.color,
-                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
@@ -224,6 +232,8 @@ class PostCard extends StatelessWidget {
         );
       },
     );
+
+    controller.dispose();
   }
 
   Future<void> _showDeleteDialog(BuildContext context) async {

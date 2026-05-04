@@ -9,6 +9,7 @@ import 'package:campus_connect/services/feed_service.dart';
 import 'package:campus_connect/widgets/comment_card.dart';
 import 'package:campus_connect/widgets/comment_input.dart';
 import 'package:campus_connect/widgets/post_preview_card.dart';
+import 'package:campus_connect/screens/visited_user_profile_screen.dart';
 
 class FeedCommentsScreen extends StatelessWidget {
   final String postId;
@@ -16,6 +17,7 @@ class FeedCommentsScreen extends StatelessWidget {
   final String authorName;
   final String authorPhotoUrl;
   final Timestamp? createdAt;
+  final String authorUserId;
 
   const FeedCommentsScreen({
     super.key,
@@ -24,6 +26,7 @@ class FeedCommentsScreen extends StatelessWidget {
     required this.authorName,
     required this.authorPhotoUrl,
     required this.createdAt,
+    required this.authorUserId,
   });
 
   @override
@@ -36,6 +39,7 @@ class FeedCommentsScreen extends StatelessWidget {
         authorName: authorName,
         authorPhotoUrl: authorPhotoUrl,
         createdAt: createdAt,
+        authorUserId: authorUserId,
       ),
     );
   }
@@ -47,6 +51,7 @@ class _FeedCommentsView extends StatelessWidget {
   final String authorName;
   final String authorPhotoUrl;
   final Timestamp? createdAt;
+  final String authorUserId;
 
   const _FeedCommentsView({
     required this.postId,
@@ -54,6 +59,7 @@ class _FeedCommentsView extends StatelessWidget {
     required this.authorName,
     required this.authorPhotoUrl,
     required this.createdAt,
+    required this.authorUserId,
   });
 
   String _formatTimestamp(Timestamp? timestamp) {
@@ -207,6 +213,16 @@ class _FeedCommentsView extends StatelessWidget {
             authorPhotoUrl: authorPhotoUrl,
             formattedDate: _formatTimestamp(createdAt),
             postText: postText,
+            onAuthorTap: () {
+              if (authorUserId.isEmpty) return;
+
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder:
+                      (_) => VisitedUserProfileScreen(userId: authorUserId),
+                ),
+              );
+            },
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
@@ -259,6 +275,26 @@ class _FeedCommentsView extends StatelessWidget {
                           commentText: commentText,
                           formattedDate: _formatTimestamp(commentCreatedAt),
                           photoUrl: commentPhotoUrl,
+                          onAuthorTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Profil öffnen für UserId: $commentUserId',
+                                ),
+                              ),
+                            );
+
+                            if (commentUserId.isEmpty) return;
+
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => VisitedUserProfileScreen(
+                                      userId: commentUserId,
+                                    ),
+                              ),
+                            );
+                          },
                         ),
 
                         if (isCommentOwner)

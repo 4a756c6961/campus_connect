@@ -5,6 +5,7 @@ class CommentCard extends StatelessWidget {
   final String commentText;
   final String formattedDate;
   final String photoUrl;
+  final VoidCallback? onAuthorTap;
 
   const CommentCard({
     super.key,
@@ -12,6 +13,7 @@ class CommentCard extends StatelessWidget {
     required this.commentText,
     required this.formattedDate,
     required this.photoUrl,
+    this.onAuthorTap,
   });
 
   @override
@@ -25,21 +27,31 @@ class CommentCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundImage: hasPhoto ? NetworkImage(photoUrl.trim()) : null,
-              child: hasPhoto ? null : const Icon(Icons.person),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onAuthorTap,
+              child: CircleAvatar(
+                radius: 20,
+                backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
+                child: !hasPhoto ? const Icon(Icons.person) : null,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    authorName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onAuthorTap,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        authorName,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 4),
                   Text(
                     formattedDate,
                     style: Theme.of(context).textTheme.bodySmall,

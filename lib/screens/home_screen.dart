@@ -9,6 +9,7 @@ import 'package:campus_connect/screens/feed_comments_screen.dart';
 import 'package:campus_connect/services/feed_service.dart';
 import 'package:campus_connect/widgets/post_card.dart';
 import 'package:campus_connect/widgets/post_input.dart';
+import 'package:campus_connect/screens/visited_user_profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   static const routeName = '/home';
@@ -65,6 +66,7 @@ class _HomeScreenView extends StatelessWidget {
     required String authorName,
     required String authorPhotoUrl,
     required Timestamp? createdAt,
+    required String authorUserId,
   }) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -75,6 +77,7 @@ class _HomeScreenView extends StatelessWidget {
               authorName: authorName,
               authorPhotoUrl: authorPhotoUrl,
               createdAt: createdAt,
+              authorUserId: authorUserId,
             ),
       ),
     );
@@ -179,6 +182,17 @@ class _HomeScreenView extends StatelessWidget {
                               editedAt: editedAt,
                               onToggleLike:
                                   () => _handleToggleLike(context, doc.id),
+                                  onAuthorTap: () {
+    if (userId.isEmpty) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VisitedUserProfileScreen(
+          userId: userId,
+        ),
+      ),
+    );
+  },
                               onOpenComments: () {
                                 _openComments(
                                   context,
@@ -187,6 +201,7 @@ class _HomeScreenView extends StatelessWidget {
                                   authorName: author,
                                   authorPhotoUrl: photoUrl,
                                   createdAt: createdAt,
+                                  authorUserId: userId,
                                 );
                               },
                             );

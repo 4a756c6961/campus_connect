@@ -5,6 +5,7 @@ class PostPreviewCard extends StatelessWidget {
   final String authorPhotoUrl;
   final String formattedDate;
   final String postText;
+  final VoidCallback? onAuthorTap;
 
   const PostPreviewCard({
     super.key,
@@ -12,6 +13,7 @@ class PostPreviewCard extends StatelessWidget {
     required this.authorPhotoUrl,
     required this.formattedDate,
     required this.postText,
+    this.onAuthorTap,
   });
 
   @override
@@ -25,20 +27,28 @@ class PostPreviewCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundImage:
-                  hasPhoto ? NetworkImage(authorPhotoUrl.trim()) : null,
-              child: hasPhoto ? null : const Icon(Icons.person),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onAuthorTap,
+              child: CircleAvatar(
+                radius: 22,
+                backgroundImage:
+                    hasPhoto ? NetworkImage(authorPhotoUrl.trim()) : null,
+                child: hasPhoto ? null : const Icon(Icons.person),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    authorName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onAuthorTap,
+                    child: Text(
+                      authorName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
