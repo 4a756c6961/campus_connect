@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import 'package:campus_connect/services/profile_service.dart';
+import 'package:campus_connect/screens/edit_profile_screen.dart';
 
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
@@ -38,18 +39,14 @@ class _ProfilScreenState extends State<ProfilScreen> {
       if (photoUrl == null) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profilbild wurde aktualisiert.'),
-        ),
+        const SnackBar(content: Text('Profilbild wurde aktualisiert.')),
       );
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Fehler beim Hochladen: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Fehler beim Hochladen: $error')));
     } finally {
       if (mounted) {
         setState(() {
@@ -98,18 +95,14 @@ class _ProfilScreenState extends State<ProfilScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profilbild wurde gelöscht.'),
-        ),
+        const SnackBar(content: Text('Profilbild wurde gelöscht.')),
       );
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Fehler beim Löschen: $error'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Fehler beim Löschen: $error')));
     } finally {
       if (mounted) {
         setState(() {
@@ -125,26 +118,21 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
     if (user == null) {
       return const Scaffold(
-        body: Center(
-          child: Text('Du bist nicht eingeloggt.'),
-        ),
+        body: Center(child: Text('Du bist nicht eingeloggt.')),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mein Profil'),
-      ),
+      appBar: AppBar(title: const Text('Mein Profil')),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .snapshots(),
+        stream:
+            FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           final data = snapshot.data?.data() as Map<String, dynamic>?;
@@ -152,10 +140,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
           final displayName = (data?['displayName'] ?? '').toString();
           final email = (data?['email'] ?? user.email ?? '').toString();
           final photoUrl = (data?['photoUrl'] ?? '').toString();
-
-          final initial = displayName.trim().isNotEmpty
-              ? displayName.trim().characters.first.toUpperCase()
-              : email.trim().isNotEmpty
+          final bio = (data?['bio'] ?? '').toString();
+          final location = (data?['location'] ?? '').toString();
+          final cohort = (data?['cohort'] ?? '').toString();
+          final initial =
+              displayName.trim().isNotEmpty
+                  ? displayName.trim().characters.first.toUpperCase()
+                  : email.trim().isNotEmpty
                   ? email.trim().characters.first.toUpperCase()
                   : '?';
 
@@ -178,43 +169,43 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   runSpacing: 4,
                   children: [
                     TextButton.icon(
-                      onPressed: _isUploading || _isDeleting
-                          ? null
-                          : _pickAndUploadProfileImage,
-                      icon: _isUploading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(Icons.camera_alt),
-                      label: Text(
-                        _isUploading
-                            ? 'Lade hoch...'
-                            : 'Profilbild ändern',
-                      ),
-                    ),
-
-                    if (photoUrl.isNotEmpty)
-                      TextButton.icon(
-                        onPressed: _isUploading || _isDeleting
-                            ? null
-                            : _confirmDeleteProfileImage,
-                        icon: _isDeleting
-                            ? const SizedBox(
+                      onPressed:
+                          _isUploading || _isDeleting
+                              ? null
+                              : _pickAndUploadProfileImage,
+                      icon:
+                          _isUploading
+                              ? const SizedBox(
                                 width: 16,
                                 height: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Icon(Icons.delete_outline),
+                              : const Icon(Icons.camera_alt),
+                      label: Text(
+                        _isUploading ? 'Lade hoch...' : 'Profilbild ändern',
+                      ),
+                    ),
+
+                    if (photoUrl.isNotEmpty)
+                      TextButton.icon(
+                        onPressed:
+                            _isUploading || _isDeleting
+                                ? null
+                                : _confirmDeleteProfileImage,
+                        icon:
+                            _isDeleting
+                                ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                                : const Icon(Icons.delete_outline),
                         label: Text(
-                          _isDeleting
-                              ? 'Lösche...'
-                              : 'Profilbild löschen',
+                          _isDeleting ? 'Lösche...' : 'Profilbild löschen',
                         ),
                       ),
                   ],
@@ -233,17 +224,45 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   email.isNotEmpty ? email : 'Keine E-Mail',
                   style: const TextStyle(color: Colors.grey),
                 ),
+                const SizedBox(height: 16),
 
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder:
+                            (_) => EditProfileScreen(
+                              currentDisplayName: displayName,
+                              currentBio: bio,
+                              currentLocation: location,
+                              currentCohort: cohort,
+                            ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Profil bearbeiten'),
+                ),
+                const SizedBox(height: 16),
+
+                if (bio.isNotEmpty) Text(bio, textAlign: TextAlign.center),
+
+                if (location.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text('Standort: $location'),
+                ],
+
+                if (cohort.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('Kohorte: $cohort'),
+                ],
                 const SizedBox(height: 24),
 
                 const Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Meine Beiträge',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
 
@@ -251,17 +270,16 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
                 Expanded(
                   child: StreamBuilder<QuerySnapshot>(
-                    stream: FirebaseFirestore.instance
-                        .collection('posts')
-                        .where('userId', isEqualTo: user.uid)
-                        .orderBy('createdAt', descending: true)
-                        .snapshots(),
+                    stream:
+                        FirebaseFirestore.instance
+                            .collection('posts')
+                            .where('userId', isEqualTo: user.uid)
+                            .orderBy('createdAt', descending: true)
+                            .snapshots(),
                     builder: (context, postSnapshot) {
                       if (postSnapshot.connectionState ==
                           ConnectionState.waiting) {
-                        return const Center(
-                          child: CircularProgressIndicator(),
-                        );
+                        return const Center(child: CircularProgressIndicator());
                       }
 
                       if (postSnapshot.hasError) {
@@ -274,9 +292,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
                       if (docs.isEmpty) {
                         return const Center(
-                          child: Text(
-                            'Du hast noch keine Beiträge erstellt.',
-                          ),
+                          child: Text('Du hast noch keine Beiträge erstellt.'),
                         );
                       }
 
@@ -284,14 +300,12 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         itemCount: docs.length,
                         itemBuilder: (context, index) {
                           final doc = docs[index];
-                          final postData =
-                              doc.data() as Map<String, dynamic>;
+                          final postData = doc.data() as Map<String, dynamic>;
 
                           final text = (postData['text'] ?? '').toString();
                           final createdAtRaw = postData['createdAt'];
-                          final createdAt = createdAtRaw is Timestamp
-                              ? createdAtRaw
-                              : null;
+                          final createdAt =
+                              createdAtRaw is Timestamp ? createdAtRaw : null;
 
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),

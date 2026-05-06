@@ -48,12 +48,9 @@ class ProfileService {
 
     final downloadUrl = await storageRef.getDownloadURL();
 
-    await _firestore.collection('users').doc(user.uid).set(
-      {
-        'photoUrl': downloadUrl,
-      },
-      SetOptions(merge: true),
-    );
+    await _firestore.collection('users').doc(user.uid).set({
+      'photoUrl': downloadUrl,
+    }, SetOptions(merge: true));
 
     return downloadUrl;
   }
@@ -82,8 +79,28 @@ class ProfileService {
       }
     }
 
-    await userDocRef.update({
-      'photoUrl': FieldValue.delete(),
-    });
+    await userDocRef.update({'photoUrl': FieldValue.delete()});
+  }
+
+  Future<void> updateProfileFields({
+    required String displayName,
+    required String bio,
+    required String location,
+    required String cohort,
+  }) async {
+    final user = _auth.currentUser;
+
+    if (user == null) {
+      throw Exception('Kein eingeloggter Nutzer gefunden.');
+    }
+
+    await _firestore.collection('users').doc(user.uid).set({
+      'displayName': displayName.trim(),
+      'bio': bio.trim(),
+      'location': location.trim(),
+      'cohort': cohort.trim(),
+      'email': user.email,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 }
