@@ -19,22 +19,27 @@ class VisitedUserProfileScreen extends StatelessWidget {
   }
 
   String _getBio(Map<String, dynamic> data) {
-    return (data['bio'] ?? 'Noch keine Profilbeschreibung vorhanden.')
-        .toString();
+    return (data['bio'] ?? '').toString().trim();
   }
 
   @override
   Widget build(BuildContext context) {
-    final userDoc =
-        FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
+    final userDoc = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .snapshots();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
+      appBar: AppBar(
+        title: const Text('Profil'),
+      ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: userDoc,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
           if (snapshot.hasError) {
@@ -44,7 +49,9 @@ class VisitedUserProfileScreen extends StatelessWidget {
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('Profil nicht gefunden.'));
+            return const Center(
+              child: Text('Profil nicht gefunden.'),
+            );
           }
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -52,46 +59,87 @@ class VisitedUserProfileScreen extends StatelessWidget {
           final displayName = _getDisplayName(data);
           final photoUrl = _getPhotoUrl(data);
           final bio = _getBio(data);
+          final location = (data['location'] ?? '').toString().trim();
+          final cohort = (data['cohort'] ?? '').toString().trim();
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 CircleAvatar(
                   radius: 54,
                   backgroundImage:
                       photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                  child:
-                      photoUrl.isEmpty
-                          ? const Icon(Icons.person, size: 54)
-                          : null,
+                  child: photoUrl.isEmpty
+                      ? const Icon(Icons.person, size: 54)
+                      : null,
                 ),
+
                 const SizedBox(height: 16),
+
                 Text(
                   displayName,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
-                const SizedBox(height: 24),
+
+                const SizedBox(height: 32),
+
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Über mich',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
+
                 const SizedBox(height: 8),
+
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    bio,
+                    bio.isNotEmpty
+                        ? bio
+                        : 'Noch keine Profilbeschreibung vorhanden.',
                     style: Theme.of(context).textTheme.bodyLarge,
                   ),
                 ),
+
+                if (location.isNotEmpty || cohort.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        if (location.isNotEmpty)
+                          Chip(
+                            avatar: const Icon(
+                              Icons.location_on,
+                              size: 18,
+                            ),
+                            label: Text(location),
+                          ),
+
+                        if (cohort.isNotEmpty)
+                          Chip(
+                            avatar: const Icon(
+                              Icons.school,
+                              size: 18,
+                            ),
+                            label: Text(cohort),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           );
