@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:campus_connect/widgets/user_posts_section.dart';
 
 class VisitedUserProfileScreen extends StatelessWidget {
   final String userId;
@@ -24,22 +25,16 @@ class VisitedUserProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userDoc = FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .snapshots();
+    final userDoc =
+        FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profil'),
-      ),
+      appBar: AppBar(title: const Text('Profil')),
       body: StreamBuilder<DocumentSnapshot>(
         stream: userDoc,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
@@ -49,9 +44,7 @@ class VisitedUserProfileScreen extends StatelessWidget {
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(
-              child: Text('Profil nicht gefunden.'),
-            );
+            return const Center(child: Text('Profil nicht gefunden.'));
           }
 
           final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -71,9 +64,10 @@ class VisitedUserProfileScreen extends StatelessWidget {
                   radius: 54,
                   backgroundImage:
                       photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                  child: photoUrl.isEmpty
-                      ? const Icon(Icons.person, size: 54)
-                      : null,
+                  child:
+                      photoUrl.isEmpty
+                          ? const Icon(Icons.person, size: 54)
+                          : null,
                 ),
 
                 const SizedBox(height: 16),
@@ -82,8 +76,8 @@ class VisitedUserProfileScreen extends StatelessWidget {
                   displayName,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
 
                 const SizedBox(height: 32),
@@ -93,8 +87,8 @@ class VisitedUserProfileScreen extends StatelessWidget {
                   child: Text(
                     'Über mich',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
 
@@ -121,21 +115,18 @@ class VisitedUserProfileScreen extends StatelessWidget {
                       children: [
                         if (location.isNotEmpty)
                           Chip(
-                            avatar: const Icon(
-                              Icons.location_on,
-                              size: 18,
-                            ),
+                            avatar: const Icon(Icons.location_on, size: 18),
                             label: Text(location),
                           ),
 
                         if (cohort.isNotEmpty)
                           Chip(
-                            avatar: const Icon(
-                              Icons.school,
-                              size: 18,
-                            ),
+                            avatar: const Icon(Icons.school, size: 18),
                             label: Text(cohort),
                           ),
+                        const SizedBox(height: 24),
+
+                        UserPostsSection(userId: userId, title: 'Beiträge'),
                       ],
                     ),
                   ),
