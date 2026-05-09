@@ -40,11 +40,7 @@ class _PostInputState extends State<PostInput>
     }
 
     context.read<FeedProvider>().setSelectedGif(
-      SelectedGif(
-        id: media.id,
-        url: gifUrl,
-        title: media.title ?? 'GIPHY GIF',
-      ),
+      SelectedGif(id: media.id, url: gifUrl, title: media.title ?? 'GIPHY GIF'),
     );
   }
 
@@ -66,6 +62,9 @@ class _PostInputState extends State<PostInput>
           children: [
             TextField(
               controller: provider.controller,
+              onTapOutside: (_) {
+                FocusScope.of(context).unfocus();
+              },
               maxLines: null,
               decoration: const InputDecoration(
                 hintText: 'Was möchtest du teilen?',
@@ -91,10 +90,7 @@ class _PostInputState extends State<PostInput>
                     child: CircleAvatar(
                       backgroundColor: Colors.black54,
                       child: IconButton(
-                        icon: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                        ),
+                        icon: const Icon(Icons.close, color: Colors.white),
                         onPressed: provider.removeSelectedGif,
                       ),
                     ),
@@ -106,10 +102,7 @@ class _PostInputState extends State<PostInput>
                 alignment: Alignment.centerRight,
                 child: Text(
                   'Powered by GIPHY',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(fontSize: 11, color: Colors.grey),
                 ),
               ),
             ],
@@ -125,26 +118,28 @@ class _PostInputState extends State<PostInput>
                 ),
                 const Spacer(),
                 ElevatedButton.icon(
-                  onPressed: provider.isSending
-                      ? null
-                      : () async {
-                          final error = await provider.sendPost();
+                  onPressed:
+                      provider.isSending
+                          ? null
+                          : () async {
+                            final error = await provider.sendPost();
 
-                          if (!context.mounted) return;
+                            if (!context.mounted) return;
 
-                          if (error != null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text(error)),
-                            );
-                          }
-                        },
-                  icon: provider.isSending
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send),
+                            if (error != null) {
+                              ScaffoldMessenger.of(
+                                context,
+                              ).showSnackBar(SnackBar(content: Text(error)));
+                            }
+                          },
+                  icon:
+                      provider.isSending
+                          ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                          : const Icon(Icons.send),
                   label: const Text('Posten'),
                 ),
               ],
