@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:campus_connect/screens/home_screen.dart';
 import 'package:campus_connect/screens/profil_screen.dart';
+import 'package:campus_connect/screens/create_post_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   static const routeName = '/main-navigation';
@@ -14,7 +15,7 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [HomeScreen(), ProfilScreen()];
+  final List<Widget> _pages = const [HomeScreen(), CreatePostScreen(), ProfilScreen()];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -31,7 +32,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         onTap: _onItemTapped,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.feed), label: 'Feed'),
+          BottomNavigationBarItem(icon: Icon(Icons.add),  label:'Beitrag'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+          
         ],
       ),
     );

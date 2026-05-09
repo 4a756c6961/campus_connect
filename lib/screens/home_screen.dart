@@ -211,7 +211,6 @@ class _HomeScreenView extends StatelessWidget {
               },
             ),
           ),
-          const PostInput(),
         ],
       ),
     );
