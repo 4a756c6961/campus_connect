@@ -35,18 +35,6 @@ class _HomeScreenView extends StatelessWidget {
     return DateFormat('dd.MM.yyyy, HH:mm').format(timestamp.toDate());
   }
 
-  Future<void> _handleSendPost(BuildContext context) async {
-    final message = await context.read<FeedProvider>().sendPost();
-
-    if (!context.mounted) return;
-
-    if (message != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    }
-  }
-
   Future<void> _handleToggleLike(BuildContext context, String postId) async {
     final message = await context.read<FeedProvider>().toggleLike(postId);
 
@@ -133,6 +121,12 @@ class _HomeScreenView extends StatelessWidget {
                     final userId = (data['userId'] ?? '').toString();
                     final photoUrl = (data['photoUrl'] ?? '').toString();
 
+                    final gifDataRaw = data['gif'];
+                    final gifData =
+                        gifDataRaw is Map<String, dynamic> ? gifDataRaw : null;
+                    final gifUrl = (gifData?['url'] ?? '').toString();
+                    final gifTitle = (gifData?['title'] ?? '').toString();
+
                     final author =
                         userName.isNotEmpty
                             ? userName
@@ -180,19 +174,22 @@ class _HomeScreenView extends StatelessWidget {
                               commentCount: liveCommentCount,
                               hasLiked: hasLiked,
                               editedAt: editedAt,
+                              gifUrl: gifUrl,
+                              gifTitle: gifTitle,
                               onToggleLike:
                                   () => _handleToggleLike(context, doc.id),
-                                  onAuthorTap: () {
-    if (userId.isEmpty) return;
+                              onAuthorTap: () {
+                                if (userId.isEmpty) return;
 
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => VisitedUserProfileScreen(
-          userId: userId,
-        ),
-      ),
-    );
-  },
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => VisitedUserProfileScreen(
+                                          userId: userId,
+                                        ),
+                                  ),
+                                );
+                              },
                               onOpenComments: () {
                                 _openComments(
                                   context,
@@ -214,11 +211,7 @@ class _HomeScreenView extends StatelessWidget {
               },
             ),
           ),
-          PostInput(
-            controller: feedProvider.controller,
-            isSending: feedProvider.isSending,
-            onSend: () => _handleSendPost(context),
-          ),
+          const PostInput(),
         ],
       ),
     );

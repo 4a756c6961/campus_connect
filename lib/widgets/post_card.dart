@@ -19,6 +19,8 @@ class PostCard extends StatelessWidget {
   final VoidCallback onOpenComments;
   final VoidCallback? onAuthorTap;
   final DateTime? editedAt;
+  final String gifUrl;
+  final String gifTitle;
 
   const PostCard({
     super.key,
@@ -35,6 +37,8 @@ class PostCard extends StatelessWidget {
     required this.onOpenComments,
     this.onAuthorTap,
     this.editedAt,
+    required this.gifUrl,
+    required this.gifTitle,
   });
 
   @override
@@ -118,7 +122,45 @@ class PostCard extends StatelessWidget {
 
             const SizedBox(height: 8),
 
-            Text(text),
+            if (text.trim().isNotEmpty) Text(text),
+
+            if (gifUrl.trim().isNotEmpty) ...[
+              if (text.trim().isNotEmpty) const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  gifUrl.trim(),
+                  width: double.infinity,
+                  fit: BoxFit.contain,
+                  semanticLabel:
+                      gifTitle.trim().isNotEmpty
+                          ? gifTitle.trim()
+                          : 'GIPHY GIF',
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+
+                    return const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('GIF konnte nicht geladen werden.'),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Powered by GIPHY',
+                  style: TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+              ),
+            ],
 
             if (editedAt != null) ...[
               const SizedBox(height: 6),

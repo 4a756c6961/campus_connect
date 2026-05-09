@@ -1,51 +1,153 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class PostInput extends StatelessWidget {
-  final TextEditingController controller;
-  final bool isSending;
-  final VoidCallback onSend;
+import 'package:campus_connect/models/selected_gif.dart';
+import 'package:campus_connect/providers/feed_provider.dart';
 
-  const PostInput({
-    super.key,
-    required this.controller,
-    required this.isSending,
-    required this.onSend,
-  });
+import 'package:giphy_flutter_sdk/dto/giphy_media.dart';
+import 'package:giphy_flutter_sdk/giphy_dialog.dart';
+
+class PostInput extends StatefulWidget {
+  const PostInput({super.key});
+
+  @override
+  State<PostInput> createState() => _PostInputState();
+}
+
+class _PostInputState extends State<PostInput>
+    implements GiphyMediaSelectionListener {
+  @override
+  void initState() {
+    super.initState();
+    GiphyDialog.instance.addListener(this);
+  }
+
+  void _openGiphyDialog() {
+    GiphyDialog.instance.show();
+  }
+
+  @override
+  void onMediaSelect(GiphyMedia media) {
+    final gifUrl = media.images.original?.gifUrl;
+
+    if (gifUrl == null || gifUrl.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Das ausgewählte GIF konnte nicht geladen werden.'),
+        ),
+      );
+      return;
+    }
+
+    context.read<FeedProvider>().setSelectedGif(
+      SelectedGif(
+        id: media.id,
+        url: gifUrl,
+        title: media.title ?? 'GIPHY GIF',
+      ),
+    );
+  }
+
+  @override
+  void onDismiss() {
+    // Müssen wir nicht aktiv behandeln.
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
+    final provider = context.watch<FeedProvider>();
+    final selectedGif = provider.selectedGif;
+
+    return Card(
+      margin: const EdgeInsets.all(12),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-        child: Row(
+        padding: const EdgeInsets.all(12),
+        child: Column(
           children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) {
-                  if (!isSending) {
-                    onSend();
-                  }
-                },
-                decoration: const InputDecoration(
-                  hintText: 'Schreib was in den Feed…',
-                  border: OutlineInputBorder(),
-                ),
+            TextField(
+              controller: provider.controller,
+              maxLines: null,
+              decoration: const InputDecoration(
+                hintText: 'Was möchtest du teilen?',
+                border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: isSending ? null : onSend,
-              icon:
-                  isSending
+
+            if (selectedGif != null) ...[
+              const SizedBox(height: 12),
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      selectedGif.url,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.black54,
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                        ),
+                        onPressed: provider.removeSelectedGif,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  'Powered by GIPHY',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 12),
+
+            Row(
+              children: [
+                OutlinedButton.icon(
+                  onPressed: provider.isSending ? null : _openGiphyDialog,
+                  icon: const Icon(Icons.gif_box_outlined),
+                  label: const Text('GIF'),
+                ),
+                const Spacer(),
+                ElevatedButton.icon(
+                  onPressed: provider.isSending
+                      ? null
+                      : () async {
+                          final error = await provider.sendPost();
+
+                          if (!context.mounted) return;
+
+                          if (error != null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(error)),
+                            );
+                          }
+                        },
+                  icon: provider.isSending
                       ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.send),
+                  label: const Text('Posten'),
+                ),
+              ],
             ),
           ],
         ),

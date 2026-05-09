@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:campus_connect/services/feed_service.dart';
+import 'package:campus_connect/models/selected_gif.dart';
 
 class FeedProvider with ChangeNotifier {
   final FeedService _feedService;
@@ -10,21 +11,38 @@ class FeedProvider with ChangeNotifier {
   final TextEditingController controller = TextEditingController();
   bool isSending = false;
 
+  SelectedGif? selectedGif;
+
   Stream<QuerySnapshot> get postsStream => _feedService.getPostsStream();
+
+  void setSelectedGif(SelectedGif gif) {
+    selectedGif = gif;
+    notifyListeners();
+  }
+
+  void removeSelectedGif() {
+    selectedGif = null;
+    notifyListeners();
+  }
 
   Future<String?> sendPost() async {
     final text = controller.text.trim();
 
-    if (text.isEmpty) {
-      return 'Bitte gib einen Text ein.';
+    if (text.isEmpty && selectedGif == null) {
+      return 'Bitte gib einen Text ein oder wähle ein GIF aus.';
     }
 
     try {
       isSending = true;
       notifyListeners();
 
-      await _feedService.addPost(text);
+      await _feedService.addPost(
+        text,
+        gif: selectedGif,
+      );
+
       controller.clear();
+      selectedGif = null;
 
       return null;
     } catch (e) {
