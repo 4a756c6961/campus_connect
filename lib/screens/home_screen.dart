@@ -8,7 +8,6 @@ import 'package:campus_connect/providers/feed_provider.dart';
 import 'package:campus_connect/screens/feed_comments_screen.dart';
 import 'package:campus_connect/services/feed_service.dart';
 import 'package:campus_connect/widgets/post_card.dart';
-import 'package:campus_connect/widgets/post_input.dart';
 import 'package:campus_connect/screens/visited_user_profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -18,10 +17,7 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => FeedProvider(FeedService()),
-      child: const _HomeScreenView(),
-    );
+    return const _HomeScreenView();
   }
 }
 

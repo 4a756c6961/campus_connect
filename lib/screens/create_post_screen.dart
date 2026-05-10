@@ -9,10 +9,14 @@ class CreatePostScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Neuen Beitrag erstellen'),
+        centerTitle: true,
       ),
-      body: const Padding(
-        padding: EdgeInsets.all(16),
-        child: PostInput(),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: const EdgeInsets.all(16),
+          child: const PostInput(),
+        ),
       ),
     );
   }

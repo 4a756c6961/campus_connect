@@ -46,7 +46,6 @@ class _PostInputState extends State<PostInput>
 
   @override
   void onDismiss() {
-    // Müssen wir nicht aktiv behandeln.
   }
 
   @override
