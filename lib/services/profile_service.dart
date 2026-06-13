@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:campus_connect/utils/search_terms_builder.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -50,6 +51,7 @@ class ProfileService {
 
     await _firestore.collection('users').doc(user.uid).set({
       'photoUrl': downloadUrl,
+      'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
     return downloadUrl;
@@ -79,7 +81,10 @@ class ProfileService {
       }
     }
 
-    await userDocRef.update({'photoUrl': FieldValue.delete()});
+    await userDocRef.update({
+      'photoUrl': FieldValue.delete(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> updateProfileFields({
@@ -94,13 +99,32 @@ class ProfileService {
       throw Exception('Kein eingeloggter Nutzer gefunden.');
     }
 
-    await _firestore.collection('users').doc(user.uid).set({
-      'displayName': displayName.trim(),
-      'bio': bio.trim(),
-      'location': location.trim(),
-      'cohort': cohort.trim(),
+    final userDocRef = _firestore.collection('users').doc(user.uid);
+    final userDoc = await userDocRef.get();
+    final data = userDoc.data();
+
+    final trimmedDisplayName = displayName.trim();
+    final trimmedBio = bio.trim();
+    final trimmedLocation = location.trim();
+    final trimmedCohort = cohort.trim();
+
+    final userName = (data?['userName'] ?? '').toString().trim();
+
+    final searchTerms = buildSearchTerms(
+      displayName: trimmedDisplayName,
+      userName: userName,
+      location: trimmedLocation,
+      cohort: trimmedCohort,
+    );
+
+    await userDocRef.set({
+      'displayName': trimmedDisplayName,
+      'bio': trimmedBio,
+      'location': trimmedLocation,
+      'cohort': trimmedCohort,
       'email': user.email,
       'updatedAt': FieldValue.serverTimestamp(),
+      'searchTerms': searchTerms,
     }, SetOptions(merge: true));
   }
 }
