@@ -1,5 +1,3 @@
-
-
 import 'package:characters/characters.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -70,9 +68,7 @@ class _SearchScreenState extends State<SearchScreen> {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Suche'),
-      ),
+      appBar: AppBar(title: const Text('Suche')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -80,25 +76,33 @@ class _SearchScreenState extends State<SearchScreen> {
             TextField(
               controller: _searchController,
               textInputAction: TextInputAction.search,
+              // Tastatur schließen, wenn außerhalb des Suchfeldes getippt wird
+              onTapOutside: (_) {
+                FocusScope.of(context).unfocus();
+              },
               decoration: InputDecoration(
                 hintText: 'Name, Standort oder Kohorte suchen',
                 prefixIcon: const Icon(Icons.search),
-                suffixIcon: query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
+                suffixIcon:
+                    query.isNotEmpty
+                        ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          // Suchfeld leeren + Tastatur schließen
+                          onPressed: () {
+                            _searchController.clear();
+                            FocusScope.of(context).unfocus();
 
-                          setState(() {
-                            _searchText = '';
-                          });
-                        },
-                      )
-                    : null,
+                            setState(() {
+                              _searchText = '';
+                            });
+                          },
+                        )
+                        : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
+
               onChanged: (value) {
                 setState(() {
                   _searchText = value;
@@ -153,16 +157,15 @@ class _SearchScreenState extends State<SearchScreen> {
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
 
         final docs = snapshot.data?.docs ?? [];
 
-        final filteredDocs = docs.where((doc) {
-          return doc.id != currentUserId;
-        }).toList();
+        final filteredDocs =
+            docs.where((doc) {
+              return doc.id != currentUserId;
+            }).toList();
 
         if (filteredDocs.isEmpty) {
           return const Center(
@@ -193,12 +196,13 @@ class _SearchScreenState extends State<SearchScreen> {
                 radius: 24,
                 backgroundImage:
                     photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
-                child: photoUrl.isEmpty
-                    ? Text(
-                        _getInitial(displayName),
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      )
-                    : null,
+                child:
+                    photoUrl.isEmpty
+                        ? Text(
+                          _getInitial(displayName),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        )
+                        : null,
               ),
               title: Text(
                 displayName,
@@ -216,9 +220,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => VisitedUserProfileScreen(
-                      userId: doc.id,
-                    ),
+                    builder: (_) => VisitedUserProfileScreen(userId: doc.id),
                   ),
                 );
               },

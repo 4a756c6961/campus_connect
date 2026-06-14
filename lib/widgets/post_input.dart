@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import 'package:campus_connect/models/selected_gif.dart';
 import 'package:campus_connect/providers/feed_provider.dart';
-
+import 'package:campus_connect/utils/tag_utils.dart';
 import 'package:giphy_flutter_sdk/dto/giphy_media.dart';
 import 'package:giphy_flutter_sdk/giphy_dialog.dart';
 
@@ -16,14 +15,52 @@ class PostInput extends StatefulWidget {
 
 class _PostInputState extends State<PostInput>
     implements GiphyMediaSelectionListener {
+  final TextEditingController _tagController = TextEditingController();
+  final List<String> _selectedTags = [];
+
   @override
   void initState() {
     super.initState();
     GiphyDialog.instance.addListener(this);
   }
 
+  @override
+  void dispose() {
+    _tagController.dispose();
+    super.dispose();
+  }
+
   void _openGiphyDialog() {
     GiphyDialog.instance.show();
+  }
+
+  void _addTag() {
+    final tag = normalizeTag(_tagController.text);
+
+    if (tag.isEmpty) return;
+
+    if (_selectedTags.contains(tag)) {
+      _tagController.clear();
+      return;
+    }
+
+    if (_selectedTags.length >= 5) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Du kannst maximal 5 Tags hinzufügen.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _selectedTags.add(tag);
+      _tagController.clear();
+    });
+  }
+
+  void _removeTag(String tag) {
+    setState(() {
+      _selectedTags.remove(tag);
+    });
   }
 
   @override
@@ -45,8 +82,7 @@ class _PostInputState extends State<PostInput>
   }
 
   @override
-  void onDismiss() {
-  }
+  void onDismiss() {}
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +144,45 @@ class _PostInputState extends State<PostInput>
 
             const SizedBox(height: 12),
 
+            TextField(
+              controller: _tagController,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _addTag(),
+              onTapOutside: (_) {
+                FocusScope.of(context).unfocus();
+              },
+              decoration: InputDecoration(
+                labelText: 'Tags hinzufügen',
+                hintText: 'z. B. gruppenarbeit oder lerngruppe gesucht',
+                prefixIcon: const Icon(Icons.tag),
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: _addTag,
+                ),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+
+            if (_selectedTags.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children:
+                      _selectedTags.map((tag) {
+                        return InputChip(
+                          label: Text('#$tag'),
+                          onDeleted: () => _removeTag(tag),
+                        );
+                      }).toList(),
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 12),
+
             Row(
               children: [
                 OutlinedButton.icon(
@@ -121,7 +196,9 @@ class _PostInputState extends State<PostInput>
                       provider.isSending
                           ? null
                           : () async {
-                            final error = await provider.sendPost();
+                            final error = await provider.sendPost(
+                              tags: normalizeTags(_selectedTags),
+                            );
 
                             if (!context.mounted) return;
 
@@ -129,7 +206,12 @@ class _PostInputState extends State<PostInput>
                               ScaffoldMessenger.of(
                                 context,
                               ).showSnackBar(SnackBar(content: Text(error)));
+                              return;
                             }
+
+                            setState(() {
+                              _selectedTags.clear();
+                            });
                           },
                   icon:
                       provider.isSending

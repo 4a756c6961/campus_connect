@@ -21,6 +21,7 @@ class PostCard extends StatelessWidget {
   final DateTime? editedAt;
   final String gifUrl;
   final String gifTitle;
+  final List<String> tags;
 
   const PostCard({
     super.key,
@@ -39,6 +40,7 @@ class PostCard extends StatelessWidget {
     this.editedAt,
     required this.gifUrl,
     required this.gifTitle,
+    this.tags = const [],
   });
 
   @override
@@ -52,6 +54,12 @@ class PostCard extends StatelessWidget {
         authorName.trim().isNotEmpty
             ? authorName.trim().characters.first.toUpperCase()
             : '?';
+
+    final visibleTags =
+        tags
+            .map((tag) => tag.trim())
+            .where((tag) => tag.isNotEmpty)
+            .toList();
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -124,8 +132,24 @@ class PostCard extends StatelessWidget {
 
             if (text.trim().isNotEmpty) Text(text),
 
+            if (visibleTags.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children:
+                    visibleTags.map((tag) {
+                      return Chip(
+                        label: Text('#$tag'),
+                        visualDensity: VisualDensity.compact,
+                      );
+                    }).toList(),
+              ),
+            ],
+
             if (gifUrl.trim().isNotEmpty) ...[
-              if (text.trim().isNotEmpty) const SizedBox(height: 12),
+              if (text.trim().isNotEmpty || visibleTags.isNotEmpty)
+                const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
