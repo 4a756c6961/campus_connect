@@ -25,7 +25,7 @@ class FeedProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> sendPost() async {
+  Future<String?> sendPost({List<String> tags = const []}) async {
     final text = controller.text.trim();
 
     if (text.isEmpty && selectedGif == null) {
@@ -39,6 +39,7 @@ class FeedProvider with ChangeNotifier {
       await _feedService.addPost(
         text,
         gif: selectedGif,
+        tags: tags,
       );
 
       controller.clear();

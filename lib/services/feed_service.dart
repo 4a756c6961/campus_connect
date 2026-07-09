@@ -30,32 +30,37 @@ class FeedService {
         .snapshots();
   }
 
-  Future<void> addPost(String text, {SelectedGif? gif}) async {
-  final user = _auth.currentUser;
-  if (user == null) {
-    throw Exception('Kein eingeloggter Benutzer gefunden.');
+  Future<void> addPost(
+    String text, {
+    SelectedGif? gif,
+    List<String> tags = const [],
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('Kein eingeloggter Benutzer gefunden.');
+    }
+
+    final trimmed = text.trim();
+
+    if (trimmed.isEmpty && gif == null) {
+      throw Exception('Der Beitrag darf nicht leer sein.');
+    }
+
+    final displayName = await _getDisplayName(user);
+    final photoUrl = await _getPhotoUrl(user);
+
+    await _firestore.collection('posts').add({
+      'text': trimmed,
+      'userId': user.uid,
+      'userEmail': user.email,
+      'userName': displayName,
+      'photoUrl': photoUrl,
+      'createdAt': FieldValue.serverTimestamp(),
+      'editedAt': null,
+      'gif': gif?.toMap(),
+      'tags': tags,
+    });
   }
-
-  final trimmed = text.trim();
-
-  if (trimmed.isEmpty && gif == null) {
-    throw Exception('Der Beitrag darf nicht leer sein.');
-  }
-
-  final displayName = await _getDisplayName(user);
-  final photoUrl = await _getPhotoUrl(user);
-
-  await _firestore.collection('posts').add({
-    'text': trimmed,
-    'userId': user.uid,
-    'userEmail': user.email,
-    'userName': displayName,
-    'photoUrl': photoUrl,
-    'createdAt': FieldValue.serverTimestamp(),
-    'editedAt': null,
-    'gif': gif?.toMap(),
-  });
-}
 
   Future<void> addComment({
     required String postId,

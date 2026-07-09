@@ -51,6 +51,7 @@ class _HomeScreenView extends StatelessWidget {
     required String authorPhotoUrl,
     required Timestamp? createdAt,
     required String authorUserId,
+    required List<String> tags,
   }) {
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -62,6 +63,7 @@ class _HomeScreenView extends StatelessWidget {
               authorPhotoUrl: authorPhotoUrl,
               createdAt: createdAt,
               authorUserId: authorUserId,
+              tags: tags,
             ),
       ),
     );
@@ -139,6 +141,11 @@ class _HomeScreenView extends StatelessWidget {
                         editedAtRaw is Timestamp ? editedAtRaw.toDate() : null;
 
                     final formattedDate = _formatTimestamp(createdAt);
+                    final tags =
+                        (data['tags'] as List<dynamic>? ?? [])
+                            .map((tag) => tag.toString())
+                            .where((tag) => tag.trim().isNotEmpty)
+                            .toList();
 
                     return StreamBuilder<QuerySnapshot>(
                       stream: _feedService.getLikesStream(doc.id),
@@ -152,7 +159,7 @@ class _HomeScreenView extends StatelessWidget {
                             likeDocs.any(
                               (likeDoc) => likeDoc.id == currentUser.uid,
                             );
-
+                        
                         return StreamBuilder<QuerySnapshot>(
                           stream: _feedService.getCommentsStream(doc.id),
                           builder: (context, commentSnapshot) {
@@ -172,6 +179,7 @@ class _HomeScreenView extends StatelessWidget {
                               editedAt: editedAt,
                               gifUrl: gifUrl,
                               gifTitle: gifTitle,
+                              tags: tags,
                               onToggleLike:
                                   () => _handleToggleLike(context, doc.id),
                               onAuthorTap: () {
@@ -195,6 +203,7 @@ class _HomeScreenView extends StatelessWidget {
                                   authorPhotoUrl: photoUrl,
                                   createdAt: createdAt,
                                   authorUserId: userId,
+                                  tags: tags,
                                 );
                               },
                             );

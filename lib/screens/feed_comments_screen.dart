@@ -18,6 +18,7 @@ class FeedCommentsScreen extends StatelessWidget {
   final String authorPhotoUrl;
   final Timestamp? createdAt;
   final String authorUserId;
+final List<String> tags;
 
   const FeedCommentsScreen({
     super.key,
@@ -27,6 +28,8 @@ class FeedCommentsScreen extends StatelessWidget {
     required this.authorPhotoUrl,
     required this.createdAt,
     required this.authorUserId,
+    this.tags = const [],
+
   });
 
   @override
@@ -40,6 +43,7 @@ class FeedCommentsScreen extends StatelessWidget {
         authorPhotoUrl: authorPhotoUrl,
         createdAt: createdAt,
         authorUserId: authorUserId,
+        tags: tags,
       ),
     );
   }
@@ -52,6 +56,7 @@ class _FeedCommentsView extends StatelessWidget {
   final String authorPhotoUrl;
   final Timestamp? createdAt;
   final String authorUserId;
+  final List<String> tags;
 
   const _FeedCommentsView({
     required this.postId,
@@ -60,6 +65,7 @@ class _FeedCommentsView extends StatelessWidget {
     required this.authorPhotoUrl,
     required this.createdAt,
     required this.authorUserId,
+    this.tags = const [],
   });
 
   String _formatTimestamp(Timestamp? timestamp) {
@@ -213,6 +219,7 @@ class _FeedCommentsView extends StatelessWidget {
             authorPhotoUrl: authorPhotoUrl,
             formattedDate: _formatTimestamp(createdAt),
             postText: postText,
+            tags: tags,
             onAuthorTap: () {
               if (authorUserId.isEmpty) return;
 
