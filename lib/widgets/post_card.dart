@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:campus_connect/providers/feed_provider.dart';
+import 'package:campus_connect/widgets/tag_action_chips.dart';
 
 class PostCard extends StatelessWidget {
   final String postId;
@@ -22,6 +23,7 @@ class PostCard extends StatelessWidget {
   final String gifUrl;
   final String gifTitle;
   final List<String> tags;
+  final ValueChanged<String>? onTagTap;
 
   const PostCard({
     super.key,
@@ -40,6 +42,7 @@ class PostCard extends StatelessWidget {
     this.editedAt,
     required this.gifUrl,
     required this.gifTitle,
+    this.onTagTap,
     this.tags = const [],
   });
 
@@ -56,10 +59,7 @@ class PostCard extends StatelessWidget {
             : '?';
 
     final visibleTags =
-        tags
-            .map((tag) => tag.trim())
-            .where((tag) => tag.isNotEmpty)
-            .toList();
+        tags.map((tag) => tag.trim()).where((tag) => tag.isNotEmpty).toList();
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -134,16 +134,11 @@ class PostCard extends StatelessWidget {
 
             if (visibleTags.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children:
-                    visibleTags.map((tag) {
-                      return Chip(
-                        label: Text('#$tag'),
-                        visualDensity: VisualDensity.compact,
-                      );
-                    }).toList(),
+              TagActionChips(
+                tags: visibleTags,
+                onTagTap: (tag) {
+                  onTagTap?.call(tag);
+                },
               ),
             ],
 

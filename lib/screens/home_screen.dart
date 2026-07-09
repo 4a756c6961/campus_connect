@@ -9,6 +9,7 @@ import 'package:campus_connect/screens/feed_comments_screen.dart';
 import 'package:campus_connect/services/feed_service.dart';
 import 'package:campus_connect/widgets/post_card.dart';
 import 'package:campus_connect/screens/visited_user_profile_screen.dart';
+import 'package:campus_connect/screens/tag_filter_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   static const routeName = '/home';
@@ -159,7 +160,7 @@ class _HomeScreenView extends StatelessWidget {
                             likeDocs.any(
                               (likeDoc) => likeDoc.id == currentUser.uid,
                             );
-                        
+
                         return StreamBuilder<QuerySnapshot>(
                           stream: _feedService.getCommentsStream(doc.id),
                           builder: (context, commentSnapshot) {
@@ -180,6 +181,13 @@ class _HomeScreenView extends StatelessWidget {
                               gifUrl: gifUrl,
                               gifTitle: gifTitle,
                               tags: tags,
+                              onTagTap: (tag) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => TagFilterScreen(tag: tag),
+                                  ),
+                                );
+                              },
                               onToggleLike:
                                   () => _handleToggleLike(context, doc.id),
                               onAuthorTap: () {
