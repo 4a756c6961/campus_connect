@@ -7,7 +7,9 @@ import 'package:giphy_flutter_sdk/dto/giphy_media.dart';
 import 'package:giphy_flutter_sdk/giphy_dialog.dart';
 
 class PostInput extends StatefulWidget {
-  const PostInput({super.key});
+  final VoidCallback? onPostCreated;
+
+  const PostInput({super.key, this.onPostCreated});
 
   @override
   State<PostInput> createState() => _PostInputState();
@@ -26,6 +28,7 @@ class _PostInputState extends State<PostInput>
 
   @override
   void dispose() {
+    GiphyDialog.instance.removeListener(this);
     _tagController.dispose();
     super.dispose();
   }
@@ -209,9 +212,16 @@ class _PostInputState extends State<PostInput>
                               return;
                             }
 
+                            FocusScope.of(context).unfocus();
+
+                            provider.controller.clear();
+                            provider.removeSelectedGif();
+
                             setState(() {
                               _selectedTags.clear();
                             });
+
+                            widget.onPostCreated?.call();
                           },
                   icon:
                       provider.isSending
