@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:campus_connect/widgets/post_input.dart';
 
 class CreatePostScreen extends StatelessWidget {
-  const CreatePostScreen({super.key});
+  final VoidCallback? onPostCreated;
+
+  const CreatePostScreen({
+    super.key,
+    this.onPostCreated,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +20,9 @@ class CreatePostScreen extends StatelessWidget {
         child: SingleChildScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.all(16),
-          child: const PostInput(),
+          child: PostInput(
+            onPostCreated: onPostCreated,
+          ),
         ),
       ),
     );

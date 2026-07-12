@@ -1298,7 +1298,7 @@ PODS:
   - Flutter (1.0.0)
   - Giphy (2.3.2):
     - libwebp
-  - giphy_flutter_sdk (1.0.9):
+  - giphy_flutter_sdk (1.1.2):
     - Flutter
     - Giphy (= 2.3.2)
   - GoogleAdsOnDeviceConversion (2.1.0):
@@ -1549,7 +1549,7 @@ SPEC CHECKSUMS:
   FirebaseStorage: 50fc9ee147392943e492467db6b52759b0447037
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   Giphy: 7a50c497dca4fdf83aa23d5afc0c6768fabb2a21
-  giphy_flutter_sdk: c644760dd0cfb63bcac2fd6b3dd3587ca7cb8365
+  giphy_flutter_sdk: 819b5c1d726539141b94499cf2e0e03f6cb49bc4
   GoogleAdsOnDeviceConversion: 2be6297a4f048459e0ae17fad9bfd2844e10cf64
   GoogleAppMeasurement: 700dce7541804bec33db590a5c496b663fbe2539
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1

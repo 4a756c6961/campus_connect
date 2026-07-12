@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:campus_connect/providers/feed_provider.dart';
+import 'package:campus_connect/widgets/tag_action_chips.dart';
 
 class PostCard extends StatelessWidget {
   final String postId;
@@ -22,6 +23,7 @@ class PostCard extends StatelessWidget {
   final String gifUrl;
   final String gifTitle;
   final List<String> tags;
+  final ValueChanged<String>? onTagTap;
 
   const PostCard({
     super.key,
@@ -40,6 +42,7 @@ class PostCard extends StatelessWidget {
     this.editedAt,
     required this.gifUrl,
     required this.gifTitle,
+    this.onTagTap,
     this.tags = const [],
   });
 
@@ -56,10 +59,7 @@ class PostCard extends StatelessWidget {
             : '?';
 
     final visibleTags =
-        tags
-            .map((tag) => tag.trim())
-            .where((tag) => tag.isNotEmpty)
-            .toList();
+        tags.map((tag) => tag.trim()).where((tag) => tag.isNotEmpty).toList();
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -134,16 +134,11 @@ class PostCard extends StatelessWidget {
 
             if (visibleTags.isNotEmpty) ...[
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children:
-                    visibleTags.map((tag) {
-                      return Chip(
-                        label: Text('#$tag'),
-                        visualDensity: VisualDensity.compact,
-                      );
-                    }).toList(),
+              TagActionChips(
+                tags: visibleTags,
+                onTagTap: (tag) {
+                  onTagTap?.call(tag);
+                },
               ),
             ],
 
@@ -198,9 +193,9 @@ class PostCard extends StatelessWidget {
 
             Row(
               children: [
-                IconButton(
+                _AnimatedLikeButton(
+                  hasLiked: hasLiked,
                   onPressed: onToggleLike,
-                  icon: Icon(hasLiked ? Icons.favorite : Icons.favorite_border),
                 ),
                 Text('$likeCount'),
                 const SizedBox(width: 16),
@@ -340,5 +335,78 @@ class PostCard extends StatelessWidget {
         ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
       }
     }
+  }
+}
+
+class _AnimatedLikeButton extends StatefulWidget {
+  final bool hasLiked;
+  final VoidCallback onPressed;
+
+  const _AnimatedLikeButton({required this.hasLiked, required this.onPressed});
+
+  @override
+  State<_AnimatedLikeButton> createState() => _AnimatedLikeButtonState();
+}
+
+class _AnimatedLikeButtonState extends State<_AnimatedLikeButton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1,
+          end: 1.35,
+        ).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 45,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 1.35,
+          end: 1,
+        ).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 55,
+      ),
+    ]).animate(_controller);
+  }
+
+  void _handlePressed() {
+    // Nur beim Setzen eines Likes animieren.
+    if (!widget.hasLiked) {
+      _controller.forward(from: 0);
+    }
+
+    widget.onPressed();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: IconButton(
+        onPressed: _handlePressed,
+        tooltip: widget.hasLiked ? 'Gefällt mir entfernen' : 'Gefällt mir',
+        icon: Icon(
+          widget.hasLiked ? Icons.favorite : Icons.favorite_border,
+          color: widget.hasLiked ? Theme.of(context).colorScheme.primary : null,
+        ),
+      ),
+    );
   }
 }
