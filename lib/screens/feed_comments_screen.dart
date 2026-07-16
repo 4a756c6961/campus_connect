@@ -106,6 +106,45 @@ class _FeedCommentsView extends StatelessWidget {
     return '';
   }
 
+  String _readGifImageUrl(Map<String, dynamic> gifData) {
+    final imagesRaw = gifData['images'];
+
+    if (imagesRaw is! Map) {
+      return '';
+    }
+
+    final images = Map<String, dynamic>.from(imagesRaw);
+
+    final originalRaw = images['original'];
+    final fixedHeightRaw = images['fixed_height'];
+    final downsizedRaw = images['downsized_medium'];
+
+    String originalImageUrl = '';
+    String fixedHeightImageUrl = '';
+    String downsizedImageUrl = '';
+
+    if (originalRaw is Map) {
+      final original = Map<String, dynamic>.from(originalRaw);
+      originalImageUrl = (original['url'] ?? '').toString();
+    }
+
+    if (fixedHeightRaw is Map) {
+      final fixedHeight = Map<String, dynamic>.from(fixedHeightRaw);
+      fixedHeightImageUrl = (fixedHeight['url'] ?? '').toString();
+    }
+
+    if (downsizedRaw is Map) {
+      final downsized = Map<String, dynamic>.from(downsizedRaw);
+      downsizedImageUrl = (downsized['url'] ?? '').toString();
+    }
+
+    return _firstNonEmpty([
+      originalImageUrl,
+      fixedHeightImageUrl,
+      downsizedImageUrl,
+    ]);
+  }
+
   Map<String, String> _readGifData(Map<String, dynamic> postData) {
     final gifRaw = postData['gif'];
 
@@ -119,33 +158,8 @@ class _FeedCommentsView extends StatelessWidget {
             ? Map<String, dynamic>.from(selectedGifRaw)
             : <String, dynamic>{};
 
-    String originalImageUrl = '';
-    String fixedHeightImageUrl = '';
-    String downsizedImageUrl = '';
-
-    final imagesRaw = gifData['images'];
-
-    if (imagesRaw is Map) {
-      final images = Map<String, dynamic>.from(imagesRaw);
-
-      final originalRaw = images['original'];
-      if (originalRaw is Map) {
-        final original = Map<String, dynamic>.from(originalRaw);
-        originalImageUrl = (original['url'] ?? '').toString();
-      }
-
-      final fixedHeightRaw = images['fixed_height'];
-      if (fixedHeightRaw is Map) {
-        final fixedHeight = Map<String, dynamic>.from(fixedHeightRaw);
-        fixedHeightImageUrl = (fixedHeight['url'] ?? '').toString();
-      }
-
-      final downsizedRaw = images['downsized_medium'];
-      if (downsizedRaw is Map) {
-        final downsized = Map<String, dynamic>.from(downsizedRaw);
-        downsizedImageUrl = (downsized['url'] ?? '').toString();
-      }
-    }
+    final gifImageUrl = _readGifImageUrl(gifData);
+    final selectedGifImageUrl = _readGifImageUrl(selectedGifData);
 
     final resolvedGifUrl = _firstNonEmpty([
       postData['gifUrl'],
@@ -153,9 +167,8 @@ class _FeedCommentsView extends StatelessWidget {
       gifData['gifUrl'],
       selectedGifData['url'],
       selectedGifData['gifUrl'],
-      originalImageUrl,
-      fixedHeightImageUrl,
-      downsizedImageUrl,
+      gifImageUrl,
+      selectedGifImageUrl,
       gifUrl,
     ]);
 
@@ -246,6 +259,42 @@ class _FeedCommentsView extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  Widget _buildEmptyCommentsState(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.chat_bubble_outline,
+              size: 48,
+              color: colorScheme.primary.withValues(alpha: 0.75),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Noch keine Kommentare',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Starte die Unterhaltung und schreibe den ersten Kommentar.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -406,9 +455,7 @@ class _FeedCommentsView extends StatelessWidget {
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text('Noch keine Kommentare vorhanden.'),
-                  );
+                  return _buildEmptyCommentsState(context);
                 }
 
                 final commentDocs = snapshot.data!.docs;
