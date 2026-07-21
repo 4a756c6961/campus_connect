@@ -380,78 +380,122 @@ class _FeedCommentsView extends StatelessWidget {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final commentsProvider = context.watch<CommentsProvider>();
-    final commentsStream = commentsProvider.commentsStream;
+@override
+Widget build(BuildContext context) {
+  final commentsProvider = context.watch<CommentsProvider>();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Kommentare')),
-      body: Column(
-        children: [
-          _buildPostPreview(context),
+  return Scaffold(
+    resizeToAvoidBottomInset: true,
+    appBar: AppBar(
+      title: const Text('Kommentare'),
+    ),
+    body: Column(
+      children: [
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: commentsProvider.commentsStream,
+            builder: (ctx, snapshot) {
+              final isLoading =
+                  snapshot.connectionState == ConnectionState.waiting;
 
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: commentsStream,
-              builder: (ctx, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+              final hasError = snapshot.hasError;
 
-                if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('Fehler beim Laden der Kommentare.'),
-                  );
-                }
+              final commentDocs = snapshot.data?.docs ?? [];
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text('Noch keine Kommentare vorhanden.'),
-                  );
-                }
+              final itemCount =
+                  isLoading || hasError || commentDocs.isEmpty
+                      ? 2
+                      : commentDocs.length + 1;
 
-                final commentDocs = snapshot.data!.docs;
+              return ListView.builder(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.only(bottom: 8),
+                itemCount: itemCount,
+                itemBuilder: (ctx, index) {
+                  // Der ursprüngliche Beitrag ist jetzt Teil
+                  // des scrollbaren Bereichs.
+                  if (index == 0) {
+                    return _buildPostPreview(context);
+                  }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: commentDocs.length,
-                  itemBuilder: (ctx, index) {
-                    final commentDoc = commentDocs[index];
-                    final commentId = commentDoc.id;
+                  if (isLoading) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
 
-                    final commentData =
-                        commentDoc.data() as Map<String, dynamic>;
+                  if (hasError) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: Text(
+                          'Fehler beim Laden der Kommentare.',
+                        ),
+                      ),
+                    );
+                  }
 
-                    final commentText = (commentData['text'] ?? '').toString();
+                  if (commentDocs.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: Text(
+                          'Noch keine Kommentare vorhanden.',
+                        ),
+                      ),
+                    );
+                  }
 
-                    final commentAuthor =
-                        (commentData['authorName'] ?? 'Unbekannt').toString();
+                  final commentDoc = commentDocs[index - 1];
+                  final commentId = commentDoc.id;
 
-                    final commentCreatedAt =
-                        commentData['createdAt'] as Timestamp?;
+                  final commentData =
+                      commentDoc.data() as Map<String, dynamic>;
 
-                    final commentPhotoUrl =
-                        (commentData['photoUrl'] ?? '').toString();
+                  final commentText =
+                      (commentData['text'] ?? '').toString();
 
-                    final commentUserId =
-                        (commentData['userId'] ?? '').toString();
+                  final commentAuthor =
+                      (commentData['authorName'] ?? 'Unbekannt').toString();
 
-                    final currentUser = FirebaseAuth.instance.currentUser;
-                    final isCommentOwner = currentUser?.uid == commentUserId;
+                  final commentCreatedAt =
+                      commentData['createdAt'] as Timestamp?;
 
-                    return Stack(
+                  final commentPhotoUrl =
+                      (commentData['photoUrl'] ?? '').toString();
+
+                  final commentUserId =
+                      (commentData['userId'] ?? '').toString();
+
+                  final currentUser =
+                      FirebaseAuth.instance.currentUser;
+
+                  final isCommentOwner =
+                      currentUser?.uid == commentUserId;
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                    ),
+                    child: Stack(
                       children: [
                         CommentCard(
                           authorName: commentAuthor,
                           commentText: commentText,
-                          formattedDate: _formatTimestamp(commentCreatedAt),
+                          formattedDate:
+                              _formatTimestamp(commentCreatedAt),
                           photoUrl: commentPhotoUrl,
                           onAuthorTap: () {
-                            _openVisitedProfile(context, commentUserId);
+                            _openVisitedProfile(
+                              context,
+                              commentUserId,
+                            );
                           },
                         ),
-
                         if (isCommentOwner)
                           Positioned(
                             top: 4,
@@ -473,34 +517,35 @@ class _FeedCommentsView extends StatelessWidget {
                                   );
                                 }
                               },
-                              itemBuilder:
-                                  (context) => const [
-                                    PopupMenuItem(
-                                      value: 'edit',
-                                      child: Text('Bearbeiten'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: 'delete',
-                                      child: Text('Löschen'),
-                                    ),
-                                  ],
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('Bearbeiten'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Löschen'),
+                                ),
+                              ],
                             ),
                           ),
                       ],
-                    );
-                  },
-                );
-              },
-            ),
+                    ),
+                  );
+                },
+              );
+            },
           ),
+        ),
 
-          CommentInput(
-            controller: commentsProvider.controller,
-            isSending: commentsProvider.isSending,
-            onSend: () => _handleSendComment(context),
-          ),
-        ],
-      ),
-    );
-  }
+        // Bleibt fest oberhalb der Tastatur.
+        CommentInput(
+          controller: commentsProvider.controller,
+          isSending: commentsProvider.isSending,
+          onSend: () => _handleSendComment(context),
+        ),
+      ],
+    ),
+  );
+}
 }
