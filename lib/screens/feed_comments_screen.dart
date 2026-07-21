@@ -5,11 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'package:campus_connect/providers/comments_provider.dart';
+import 'package:campus_connect/screens/visited_user_profile_screen.dart';
 import 'package:campus_connect/services/feed_service.dart';
 import 'package:campus_connect/widgets/comment_card.dart';
 import 'package:campus_connect/widgets/comment_input.dart';
 import 'package:campus_connect/widgets/post_preview_card.dart';
-import 'package:campus_connect/screens/visited_user_profile_screen.dart';
 
 class FeedCommentsScreen extends StatelessWidget {
   final String postId;
@@ -18,7 +18,9 @@ class FeedCommentsScreen extends StatelessWidget {
   final String authorPhotoUrl;
   final Timestamp? createdAt;
   final String authorUserId;
-final List<String> tags;
+  final List<String> tags;
+  final String gifUrl;
+  final String gifTitle;
 
   const FeedCommentsScreen({
     super.key,
@@ -29,7 +31,8 @@ final List<String> tags;
     required this.createdAt,
     required this.authorUserId,
     this.tags = const [],
-
+    this.gifUrl = '',
+    this.gifTitle = '',
   });
 
   @override
@@ -44,6 +47,8 @@ final List<String> tags;
         createdAt: createdAt,
         authorUserId: authorUserId,
         tags: tags,
+        gifUrl: gifUrl,
+        gifTitle: gifTitle,
       ),
     );
   }
@@ -57,6 +62,8 @@ class _FeedCommentsView extends StatelessWidget {
   final Timestamp? createdAt;
   final String authorUserId;
   final List<String> tags;
+  final String gifUrl;
+  final String gifTitle;
 
   const _FeedCommentsView({
     required this.postId,
@@ -66,12 +73,180 @@ class _FeedCommentsView extends StatelessWidget {
     required this.createdAt,
     required this.authorUserId,
     this.tags = const [],
+    this.gifUrl = '',
+    this.gifTitle = '',
   });
 
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'Gerade eben';
-    final date = timestamp.toDate();
-    return DateFormat('dd.MM.yyyy HH:mm').format(date);
+
+    return DateFormat('dd.MM.yyyy HH:mm').format(timestamp.toDate());
+  }
+
+  List<String> _readTags(dynamic rawTags) {
+    if (rawTags is! Iterable) {
+      return [];
+    }
+
+    return rawTags
+        .map((tag) => tag.toString().trim())
+        .where((tag) => tag.isNotEmpty)
+        .toList();
+  }
+
+  String _firstNonEmpty(List<dynamic> values) {
+    for (final value in values) {
+      final text = value?.toString().trim() ?? '';
+
+      if (text.isNotEmpty) {
+        return text;
+      }
+    }
+
+    return '';
+  }
+
+  Map<String, String> _readGifData(Map<String, dynamic> postData) {
+    final gifRaw = postData['gif'];
+
+    final gifData =
+        gifRaw is Map ? Map<String, dynamic>.from(gifRaw) : <String, dynamic>{};
+
+    final selectedGifRaw = postData['selectedGif'];
+
+    final selectedGifData =
+        selectedGifRaw is Map
+            ? Map<String, dynamic>.from(selectedGifRaw)
+            : <String, dynamic>{};
+
+    String originalImageUrl = '';
+    String fixedHeightImageUrl = '';
+    String downsizedImageUrl = '';
+
+    final imagesRaw = gifData['images'];
+
+    if (imagesRaw is Map) {
+      final images = Map<String, dynamic>.from(imagesRaw);
+
+      final originalRaw = images['original'];
+      if (originalRaw is Map) {
+        final original = Map<String, dynamic>.from(originalRaw);
+        originalImageUrl = (original['url'] ?? '').toString();
+      }
+
+      final fixedHeightRaw = images['fixed_height'];
+      if (fixedHeightRaw is Map) {
+        final fixedHeight = Map<String, dynamic>.from(fixedHeightRaw);
+        fixedHeightImageUrl = (fixedHeight['url'] ?? '').toString();
+      }
+
+      final downsizedRaw = images['downsized_medium'];
+      if (downsizedRaw is Map) {
+        final downsized = Map<String, dynamic>.from(downsizedRaw);
+        downsizedImageUrl = (downsized['url'] ?? '').toString();
+      }
+    }
+
+    final resolvedGifUrl = _firstNonEmpty([
+      postData['gifUrl'],
+      gifData['url'],
+      gifData['gifUrl'],
+      selectedGifData['url'],
+      selectedGifData['gifUrl'],
+      originalImageUrl,
+      fixedHeightImageUrl,
+      downsizedImageUrl,
+      gifUrl,
+    ]);
+
+    final resolvedGifTitle = _firstNonEmpty([
+      postData['gifTitle'],
+      gifData['title'],
+      gifData['name'],
+      selectedGifData['title'],
+      selectedGifData['name'],
+      gifTitle,
+    ]);
+
+    return {'url': resolvedGifUrl, 'title': resolvedGifTitle};
+  }
+
+  void _openVisitedProfile(BuildContext context, String targetUserId) {
+    if (targetUserId.trim().isEmpty) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => VisitedUserProfileScreen(userId: targetUserId),
+      ),
+    );
+  }
+
+  Widget _buildPostPreview(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream:
+          FirebaseFirestore.instance
+              .collection('posts')
+              .doc(postId)
+              .snapshots(),
+      builder: (context, snapshot) {
+        final postData = snapshot.data?.data();
+
+        if (postData == null) {
+          return PostPreviewCard(
+            authorName: authorName,
+            authorPhotoUrl: authorPhotoUrl,
+            formattedDate: _formatTimestamp(createdAt),
+            postText: postText,
+            tags: tags,
+            gifUrl: gifUrl,
+            gifTitle: gifTitle,
+            onAuthorTap: () {
+              _openVisitedProfile(context, authorUserId);
+            },
+          );
+        }
+
+        final previewText = (postData['text'] ?? postText).toString();
+
+        final previewAuthorName =
+            (postData['authorName'] ??
+                    postData['displayName'] ??
+                    postData['userName'] ??
+                    authorName)
+                .toString();
+
+        final previewAuthorPhotoUrl =
+            (postData['authorPhotoUrl'] ??
+                    postData['photoUrl'] ??
+                    authorPhotoUrl)
+                .toString();
+
+        final previewAuthorUserId =
+            (postData['authorUserId'] ?? postData['userId'] ?? authorUserId)
+                .toString();
+
+        final createdAtRaw = postData['createdAt'];
+
+        final previewCreatedAt =
+            createdAtRaw is Timestamp ? createdAtRaw : createdAt;
+
+        final previewTags = _readTags(postData['tags']);
+        final previewGifData = _readGifData(postData);
+
+        return PostPreviewCard(
+          authorName: previewAuthorName,
+          authorPhotoUrl: previewAuthorPhotoUrl,
+          formattedDate: _formatTimestamp(previewCreatedAt),
+          postText: previewText,
+          tags: previewTags.isNotEmpty ? previewTags : tags,
+          gifUrl: previewGifData['url'] ?? '',
+          gifTitle: previewGifData['title'] ?? '',
+          onAuthorTap: () {
+            _openVisitedProfile(context, previewAuthorUserId);
+          },
+        );
+      },
+    );
   }
 
   Future<void> _handleSendComment(BuildContext context) async {
@@ -205,105 +380,122 @@ class _FeedCommentsView extends StatelessWidget {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final commentsProvider = context.watch<CommentsProvider>();
-    final commentsStream = commentsProvider.commentsStream;
+@override
+Widget build(BuildContext context) {
+  final commentsProvider = context.watch<CommentsProvider>();
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Kommentare')),
-      body: Column(
-        children: [
-          PostPreviewCard(
-            authorName: authorName,
-            authorPhotoUrl: authorPhotoUrl,
-            formattedDate: _formatTimestamp(createdAt),
-            postText: postText,
-            tags: tags,
-            onAuthorTap: () {
-              if (authorUserId.isEmpty) return;
+  return Scaffold(
+    resizeToAvoidBottomInset: true,
+    appBar: AppBar(
+      title: const Text('Kommentare'),
+    ),
+    body: Column(
+      children: [
+        Expanded(
+          child: StreamBuilder<QuerySnapshot>(
+            stream: commentsProvider.commentsStream,
+            builder: (ctx, snapshot) {
+              final isLoading =
+                  snapshot.connectionState == ConnectionState.waiting;
 
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder:
-                      (_) => VisitedUserProfileScreen(userId: authorUserId),
-                ),
-              );
-            },
-          ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: commentsStream,
-              builder: (ctx, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+              final hasError = snapshot.hasError;
 
-                if (snapshot.hasError) {
-                  return const Center(
-                    child: Text('Fehler beim Laden der Kommentare.'),
-                  );
-                }
+              final commentDocs = snapshot.data?.docs ?? [];
 
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text('Noch keine Kommentare vorhanden.'),
-                  );
-                }
+              final itemCount =
+                  isLoading || hasError || commentDocs.isEmpty
+                      ? 2
+                      : commentDocs.length + 1;
 
-                final commentDocs = snapshot.data!.docs;
+              return ListView.builder(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
+                padding: const EdgeInsets.only(bottom: 8),
+                itemCount: itemCount,
+                itemBuilder: (ctx, index) {
+                  // Der ursprüngliche Beitrag ist jetzt Teil
+                  // des scrollbaren Bereichs.
+                  if (index == 0) {
+                    return _buildPostPreview(context);
+                  }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: commentDocs.length,
-                  itemBuilder: (ctx, index) {
-                    final commentDoc = commentDocs[index];
-                    final commentId = commentDoc.id;
-                    final commentData =
-                        commentDoc.data() as Map<String, dynamic>;
+                  if (isLoading) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
 
-                    final commentText = (commentData['text'] ?? '').toString();
-                    final commentAuthor =
-                        (commentData['authorName'] ?? 'Unbekannt').toString();
-                    final commentCreatedAt =
-                        commentData['createdAt'] as Timestamp?;
-                    final commentPhotoUrl =
-                        (commentData['photoUrl'] ?? '').toString();
-                    final commentUserId =
-                        (commentData['userId'] ?? '').toString();
+                  if (hasError) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: Text(
+                          'Fehler beim Laden der Kommentare.',
+                        ),
+                      ),
+                    );
+                  }
 
-                    final currentUser = FirebaseAuth.instance.currentUser;
-                    final isCommentOwner = currentUser?.uid == commentUserId;
+                  if (commentDocs.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 48),
+                      child: Center(
+                        child: Text(
+                          'Noch keine Kommentare vorhanden.',
+                        ),
+                      ),
+                    );
+                  }
 
-                    return Stack(
+                  final commentDoc = commentDocs[index - 1];
+                  final commentId = commentDoc.id;
+
+                  final commentData =
+                      commentDoc.data() as Map<String, dynamic>;
+
+                  final commentText =
+                      (commentData['text'] ?? '').toString();
+
+                  final commentAuthor =
+                      (commentData['authorName'] ?? 'Unbekannt').toString();
+
+                  final commentCreatedAt =
+                      commentData['createdAt'] as Timestamp?;
+
+                  final commentPhotoUrl =
+                      (commentData['photoUrl'] ?? '').toString();
+
+                  final commentUserId =
+                      (commentData['userId'] ?? '').toString();
+
+                  final currentUser =
+                      FirebaseAuth.instance.currentUser;
+
+                  final isCommentOwner =
+                      currentUser?.uid == commentUserId;
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                    ),
+                    child: Stack(
                       children: [
                         CommentCard(
                           authorName: commentAuthor,
                           commentText: commentText,
-                          formattedDate: _formatTimestamp(commentCreatedAt),
+                          formattedDate:
+                              _formatTimestamp(commentCreatedAt),
                           photoUrl: commentPhotoUrl,
                           onAuthorTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Profil öffnen für UserId: $commentUserId',
-                                ),
-                              ),
-                            );
-
-                            if (commentUserId.isEmpty) return;
-
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder:
-                                    (_) => VisitedUserProfileScreen(
-                                      userId: commentUserId,
-                                    ),
-                              ),
+                            _openVisitedProfile(
+                              context,
+                              commentUserId,
                             );
                           },
                         ),
-
                         if (isCommentOwner)
                           Positioned(
                             top: 4,
@@ -325,33 +517,35 @@ class _FeedCommentsView extends StatelessWidget {
                                   );
                                 }
                               },
-                              itemBuilder:
-                                  (context) => const [
-                                    PopupMenuItem(
-                                      value: 'edit',
-                                      child: Text('Bearbeiten'),
-                                    ),
-                                    PopupMenuItem(
-                                      value: 'delete',
-                                      child: Text('Löschen'),
-                                    ),
-                                  ],
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(
+                                  value: 'edit',
+                                  child: Text('Bearbeiten'),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text('Löschen'),
+                                ),
+                              ],
                             ),
                           ),
                       ],
-                    );
-                  },
-                );
-              },
-            ),
+                    ),
+                  );
+                },
+              );
+            },
           ),
-          CommentInput(
-            controller: commentsProvider.controller,
-            isSending: commentsProvider.isSending,
-            onSend: () => _handleSendComment(context),
-          ),
-        ],
-      ),
-    );
-  }
+        ),
+
+        // Bleibt fest oberhalb der Tastatur.
+        CommentInput(
+          controller: commentsProvider.controller,
+          isSending: commentsProvider.isSending,
+          onSend: () => _handleSendComment(context),
+        ),
+      ],
+    ),
+  );
+}
 }
