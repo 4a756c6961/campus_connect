@@ -7,6 +7,7 @@ import 'package:campus_connect/screens/home_screen.dart';
 import 'package:campus_connect/screens/profil_screen.dart';
 import 'package:campus_connect/screens/search_screen.dart';
 import 'package:campus_connect/services/feed_service.dart';
+import 'package:campus_connect/screens/settings_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   static const routeName = '/main-navigation';
@@ -31,6 +32,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       CreatePostScreen(onPostCreated: _openHomeScreen),
       const SearchScreen(),
       const ProfilScreen(),
+      const SettingsScreen(),
     ];
   }
 
@@ -63,11 +65,27 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           unselectedFontSize: 13,
           showSelectedLabels: true,
           showUnselectedLabels: true,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.feed), label: 'Feed'),
-            BottomNavigationBarItem(icon: Icon(Icons.add), label: 'Beitrag'),
-            BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Suche'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profil'),
+          items: [
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.feed),
+              label: 'Feed',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.add),
+              label: 'Beitrag',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.search),
+              label: 'Suche',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.person),
+              label: 'Profil',
+            ),
+            const BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Einstellungen',
+            ),
           ],
         ),
       ),
