@@ -10,6 +10,7 @@ import 'providers/auth.dart';
 import 'screens/auth_gate.dart';
 import 'screens/auth_screen.dart';
 import 'screens/main_navigation_screen.dart';
+import 'providers/theme_provider.dart';
 
 
 void _configureGiphy() {
@@ -57,14 +58,47 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider<Auth>(create: (_) => Auth())],
-      child: MaterialApp(
-        title: 'Campus Connect',
-        theme: ThemeData(primarySwatch: Colors.deepOrange, fontFamily: 'Lato'),
-        home: const AuthGate(),
-        routes: {
-          AuthScreen.routeName: (_) => const AuthScreen(),
-          MainNavigationScreen.routeName: (_) => const MainNavigationScreen(),
+      providers: [
+        ChangeNotifierProvider<Auth>(
+          create: (_) => Auth(),
+        ),
+        ChangeNotifierProvider<ThemeProvider>(
+          create: (_) => ThemeProvider(),
+        ),
+      ],
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Campus Connect',
+
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.deepOrange,
+                brightness: Brightness.light,
+              ),
+              fontFamily: 'Lato',
+              useMaterial3: true,
+            ),
+
+            darkTheme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.deepOrange,
+                brightness: Brightness.dark,
+              ),
+              fontFamily: 'Lato',
+              useMaterial3: true,
+            ),
+
+            themeMode: themeProvider.themeMode,
+
+            home: const AuthGate(),
+
+            routes: {
+              AuthScreen.routeName: (_) => const AuthScreen(),
+              MainNavigationScreen.routeName: (_) =>
+                  const MainNavigationScreen(),
+            },
+          );
         },
       ),
     );
