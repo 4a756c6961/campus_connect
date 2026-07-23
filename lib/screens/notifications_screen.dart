@@ -113,8 +113,7 @@ class _EmptyNotificationsView extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Sobald jemand deinen Beitrag liked oder kommentiert, '
-              'erscheint die Benachrichtigung hier.',
+              'Sobald jemand mit deinem Beitrag interagiert, erscheint hier eine Benachrichtigung.',
               style: Theme.of(context).textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),

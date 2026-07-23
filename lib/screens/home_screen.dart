@@ -10,6 +10,7 @@ import 'package:campus_connect/services/feed_service.dart';
 import 'package:campus_connect/widgets/post_card.dart';
 import 'package:campus_connect/screens/visited_user_profile_screen.dart';
 import 'package:campus_connect/screens/tag_filter_screen.dart';
+import 'package:campus_connect/screens/notifications_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   static const routeName = '/home';
@@ -79,11 +80,18 @@ class _HomeScreenView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('CampusConnect Feed'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            onPressed: () => FirebaseAuth.instance.signOut(),
-          ),
-        ],
+  IconButton(
+    tooltip: 'Benachrichtigungen',
+    icon: const Icon(Icons.notifications_outlined),
+    onPressed: () {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => NotificationsScreen(),
+        ),
+      );
+    },
+  ),
+],
       ),
       body: Column(
         children: [
