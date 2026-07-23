@@ -8,7 +8,6 @@ import 'package:campus_connect/screens/profil_screen.dart';
 import 'package:campus_connect/screens/search_screen.dart';
 import 'package:campus_connect/services/feed_service.dart';
 import 'package:campus_connect/screens/settings_screen.dart';
-import 'package:campus_connect/screens/notifications_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   static const routeName = '/main-navigation';

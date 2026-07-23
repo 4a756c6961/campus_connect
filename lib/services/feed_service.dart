@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:campus_connect/models/selected_gif.dart';
+import 'package:campus_connect/services/notification_service.dart';
 
 class FeedService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final NotificationService _notificationService = NotificationService();
 
   Stream<QuerySnapshot> getPostsStream() {
     return _firestore
@@ -93,28 +95,59 @@ class FeedService {
         });
   }
 
-  Future<void> toggleLike(String postId) async {
+  Future<bool> toggleLike(String postId) async {
     final user = _auth.currentUser;
+
     if (user == null) {
       throw Exception('Kein eingeloggter Benutzer gefunden.');
     }
 
-    final likeRef = _firestore
-        .collection('posts')
-        .doc(postId)
-        .collection('likes')
-        .doc(user.uid);
+    final postRef = _firestore.collection('posts').doc(postId);
+
+    final likeRef = postRef.collection('likes').doc(user.uid);
 
     final likeDoc = await likeRef.get();
 
     if (likeDoc.exists) {
       await likeRef.delete();
-    } else {
-      await likeRef.set({
-        'userId': user.uid,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+
+      // false bedeutet: Der vorhandene Like wurde entfernt.
+      return false;
     }
+
+    await likeRef.set({
+      'userId': user.uid,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    final postSnapshot = await postRef.get();
+    final postData = postSnapshot.data();
+
+    if (postData == null) {
+      return true;
+    }
+
+    final postOwnerId = (postData['userId'] ?? '').toString();
+
+    if (postOwnerId.isEmpty || postOwnerId == user.uid) {
+      return true;
+    }
+
+    final senderName = await _getDisplayName(user);
+    final senderPhotoUrl = await _getPhotoUrl(user);
+
+    await _notificationService.createNotification(
+      receiverId: postOwnerId,
+      senderId: user.uid,
+      senderName: senderName,
+      senderPhotoUrl: senderPhotoUrl,
+      type: 'like',
+      message: '$senderName gefällt dein Beitrag.',
+      postId: postId,
+    );
+
+    // true bedeutet: Ein neuer Like wurde gesetzt.
+    return true;
   }
 
   Future<void> updatePost({

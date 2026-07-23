@@ -27,7 +27,7 @@ class _HomeScreenView extends StatelessWidget {
   const _HomeScreenView();
 
   static final FeedService _feedService = FeedService();
-
+  
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'wird geladen...';
     return DateFormat('dd.MM.yyyy, HH:mm').format(timestamp.toDate());
@@ -80,18 +80,16 @@ class _HomeScreenView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('CampusConnect Feed'),
         actions: [
-  IconButton(
-    tooltip: 'Benachrichtigungen',
-    icon: const Icon(Icons.notifications_outlined),
-    onPressed: () {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => NotificationsScreen(),
-        ),
-      );
-    },
-  ),
-],
+          IconButton(
+            tooltip: 'Benachrichtigungen',
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {
+              Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => NotificationsScreen()));
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
