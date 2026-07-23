@@ -84,7 +84,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
             const BottomNavigationBarItem(
               icon: Icon(Icons.settings),
-              label: 'Einstellungen',
+              label: 'Mehr',
             ),
           ],
         ),
