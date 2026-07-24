@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,23 +7,74 @@ import 'package:campus_connect/providers/theme_provider.dart';
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
+  Future<void> _confirmLogout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Abmelden?'),
+          content: const Text(
+            'Möchtest du dich wirklich aus Campus Connect abmelden?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              child: const Text('Abmelden'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout != true) return;
+
+    try {
+      await FirebaseAuth.instance.signOut();
+    } on FirebaseAuthException catch (error) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.message ?? 'Die Abmeldung ist fehlgeschlagen.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Einstellungen')),
+      appBar: AppBar(
+        title: const Text('Einstellungen'),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Darstellung', style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Darstellung',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 12),
           Card(
             child: Column(
               children: [
                 RadioListTile<ThemeMode>(
                   title: const Text('Systemeinstellung'),
-                  secondary: const Icon(Icons.settings_suggest_outlined),
+                  secondary: const Icon(
+                    Icons.settings_suggest_outlined,
+                  ),
                   value: ThemeMode.system,
                   groupValue: themeProvider.themeMode,
                   onChanged: (value) {
@@ -54,6 +106,31 @@ class SettingsScreen extends StatelessWidget {
                   },
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Konto',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: Icon(
+                Icons.logout,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'Abmelden',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+              subtitle: const Text(
+                'Du wirst zum Anmeldebildschirm zurückgeleitet.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _confirmLogout(context),
             ),
           ),
         ],
