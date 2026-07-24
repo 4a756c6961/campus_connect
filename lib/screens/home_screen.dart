@@ -10,6 +10,8 @@ import 'package:campus_connect/services/feed_service.dart';
 import 'package:campus_connect/widgets/post_card.dart';
 import 'package:campus_connect/screens/visited_user_profile_screen.dart';
 import 'package:campus_connect/screens/tag_filter_screen.dart';
+import 'package:campus_connect/screens/notifications_screen.dart';
+import 'package:campus_connect/services/notification_service.dart';
 
 class HomeScreen extends StatelessWidget {
   static const routeName = '/home';
@@ -26,7 +28,7 @@ class _HomeScreenView extends StatelessWidget {
   const _HomeScreenView();
 
   static final FeedService _feedService = FeedService();
-
+  static final NotificationService _notificationService = NotificationService();
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'wird geladen...';
     return DateFormat('dd.MM.yyyy, HH:mm').format(timestamp.toDate());
@@ -79,9 +81,49 @@ class _HomeScreenView extends StatelessWidget {
       appBar: AppBar(
         title: const Text('CampusConnect Feed'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.exit_to_app),
-            onPressed: () => FirebaseAuth.instance.signOut(),
+          StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+            stream:
+                FirebaseAuth.instance.currentUser == null
+                    ? null
+                    : _notificationService.getUnreadNotifications(
+                      FirebaseAuth.instance.currentUser!.uid,
+                    ),
+            builder: (context, snapshot) {
+              final unreadCount = snapshot.data?.docs.length ?? 0;
+              final hasUnreadNotifications = unreadCount > 0;
+
+              return IconButton(
+                tooltip: 'Benachrichtigungen',
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => NotificationsScreen()),
+                  );
+                },
+                icon: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    const Icon(Icons.notifications_outlined),
+                    if (hasUnreadNotifications)
+                      Positioned(
+                        top: -1,
+                        right: -1,
+                        child: Container(
+                          width: 9,
+                          height: 9,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).scaffoldBackgroundColor,
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),
