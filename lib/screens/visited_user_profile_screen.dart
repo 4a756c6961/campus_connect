@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:campus_connect/services/follow_service.dart';
 import 'package:campus_connect/widgets/user_posts_section.dart';
+import 'package:campus_connect/widgets/follow_stats.dart';
 
 class VisitedUserProfileScreen extends StatelessWidget {
   final String userId;
@@ -47,32 +48,6 @@ class VisitedUserProfileScreen extends StatelessWidget {
         context,
       ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
-  }
-
-  Widget _buildFollowCount({
-    required BuildContext context,
-    required Stream<int> stream,
-    required String label,
-  }) {
-    return StreamBuilder<int>(
-      stream: stream,
-      builder: (context, snapshot) {
-        final count = snapshot.data ?? 0;
-
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              count.toString(),
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            Text(label, style: Theme.of(context).textTheme.bodyMedium),
-          ],
-        );
-      },
-    );
   }
 
   @override
@@ -137,22 +112,7 @@ class VisitedUserProfileScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    _buildFollowCount(
-                      context: context,
-                      stream: _followService.followersCountStream(userId),
-                      label: 'Follower',
-                    ),
-                    const SizedBox(width: 48),
-                    _buildFollowCount(
-                      context: context,
-                      stream: _followService.followingCountStream(userId),
-                      label: 'Folgt',
-                    ),
-                  ],
-                ),
+               FollowStats(userId: userId),
 
                 if (!isOwnProfile) ...[
                   const SizedBox(height: 20),

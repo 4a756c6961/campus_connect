@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../services/notification_service.dart';
+import 'package:campus_connect/screens/visited_user_profile_screen.dart';
 
 class NotificationsScreen extends StatelessWidget {
   static const routeName = '/notifications';
@@ -148,6 +149,7 @@ class _NotificationCard extends StatelessWidget {
 
     final timestamp = data['createdAt'] as Timestamp?;
     final createdAt = timestamp?.toDate();
+    final senderId = data['senderId'] as String? ?? '';
 
     return Card(
       elevation: isRead ? 0 : 2,
@@ -158,6 +160,18 @@ class _NotificationCard extends StatelessWidget {
             await notificationService.markAsRead(
               userId: userId,
               notificationId: notificationId,
+            );
+          }
+
+          if (!context.mounted) {
+            return;
+          }
+
+          if (type == 'follow' && senderId.isNotEmpty) {
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => VisitedUserProfileScreen(userId: senderId),
+              ),
             );
           }
         },
@@ -227,6 +241,8 @@ class _NotificationCard extends StatelessWidget {
         return Icons.favorite;
       case 'comment':
         return Icons.comment;
+      case 'follow':
+        return Icons.person_add;
       default:
         return Icons.notifications;
     }

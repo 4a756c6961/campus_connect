@@ -1,15 +1,21 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'package:campus_connect/services/notification_service.dart';
+
 class FollowService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
+  final NotificationService _notificationService;
 
   FollowService({
     FirebaseFirestore? firestore,
     FirebaseAuth? auth,
+    NotificationService? notificationService,
   }) : _firestore = firestore ?? FirebaseFirestore.instance,
-       _auth = auth ?? FirebaseAuth.instance;
+       _auth = auth ?? FirebaseAuth.instance,
+       _notificationService =
+           notificationService ?? NotificationService(firestore: firestore);
 
   String? get currentUserId => _auth.currentUser?.uid;
 
@@ -67,7 +73,8 @@ class FollowService {
   }
 
   Future<void> followUser(String followedUserId) async {
-    final currentUserId = this.currentUserId;
+    final currentUser = _auth.currentUser;
+    final currentUserId = currentUser?.uid;
 
     if (currentUserId == null) {
       throw StateError('Es ist kein Nutzer angemeldet.');
@@ -89,14 +96,37 @@ class FollowService {
       followedUserId: followedUserId,
     );
 
-    final data = {
-      'createdAt': FieldValue.serverTimestamp(),
-    };
+    final data = {'createdAt': FieldValue.serverTimestamp()};
 
     batch.set(followerReference, data);
     batch.set(followingReference, data);
 
     await batch.commit();
+
+    final senderSnapshot =
+        await _firestore.collection('users').doc(currentUserId).get();
+
+    final senderData = senderSnapshot.data() ?? {};
+
+    final senderName =
+        (senderData['displayName'] ??
+                senderData['userName'] ??
+                senderData['name'] ??
+                currentUser?.displayName ??
+                'Jemand')
+            .toString();
+
+    final senderPhotoUrl =
+        (senderData['photoUrl'] ?? currentUser?.photoURL ?? '').toString();
+
+    await _notificationService.createNotification(
+      receiverId: followedUserId,
+      senderId: currentUserId,
+      senderName: senderName,
+      senderPhotoUrl: senderPhotoUrl.isNotEmpty ? senderPhotoUrl : null,
+      type: 'follow',
+      message: '$senderName folgt dir jetzt.',
+    );
   }
 
   Future<void> unfollowUser(String followedUserId) async {
