@@ -82,4 +82,12 @@ class NotificationService {
   }) async {
     await _notificationsCollection(userId).doc(notificationId).delete();
   }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> getUnreadNotifications(
+    String userId,
+  ) {
+    return _notificationsCollection(
+      userId,
+    ).where('isRead', isEqualTo: false).snapshots();
+  }
 }
