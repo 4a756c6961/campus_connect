@@ -72,6 +72,21 @@ class FollowService {
         .map((snapshot) => snapshot.docs.length);
   }
 
+  Stream<Set<String>> followingUserIdsStream() {
+    final currentUserId = this.currentUserId;
+
+    if (currentUserId == null) {
+      return Stream.value(<String>{});
+    }
+
+    return _firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('following')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) => doc.id).toSet());
+  }
+
   Future<void> followUser(String followedUserId) async {
     final currentUser = _auth.currentUser;
     final currentUserId = currentUser?.uid;
