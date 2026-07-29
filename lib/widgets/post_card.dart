@@ -22,6 +22,7 @@ class PostCard extends StatelessWidget {
   final DateTime? editedAt;
   final String gifUrl;
   final String gifTitle;
+  final String imageUrl;
   final List<String> tags;
   final ValueChanged<String>? onTagTap;
 
@@ -40,6 +41,7 @@ class PostCard extends StatelessWidget {
     required this.onOpenComments,
     this.onAuthorTap,
     this.editedAt,
+    required this.imageUrl,
     required this.gifUrl,
     required this.gifTitle,
     this.onTagTap,
@@ -141,7 +143,34 @@ class PostCard extends StatelessWidget {
                 },
               ),
             ],
+            if (imageUrl.trim().isNotEmpty) ...[
+              if (text.trim().isNotEmpty || visibleTags.isNotEmpty)
+                const SizedBox(height: 12),
 
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageUrl.trim(),
+                  width: double.infinity,
+                  height: 320,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+
+                    return const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Bild konnte nicht geladen werden.'),
+                    );
+                  },
+                ),
+              ),
+            ],
             if (gifUrl.trim().isNotEmpty) ...[
               if (text.trim().isNotEmpty || visibleTags.isNotEmpty)
                 const SizedBox(height: 12),

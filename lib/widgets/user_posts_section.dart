@@ -336,6 +336,10 @@ class UserPostsSection extends StatelessWidget {
                 final gifUrl = gifData['url'] ?? '';
                 final gifTitle = gifData['title'] ?? '';
 
+                final imageUrl = (
+                  data ['imageUrl'] ?? ''
+                ).toString();
+
                 final tags = _readTags(data['tags']);
 
                 final storedLikeCount = _readCount(
@@ -392,6 +396,7 @@ class UserPostsSection extends StatelessWidget {
                           editedAt: editedAt?.toDate(),
                           gifUrl: gifUrl,
                           gifTitle: gifTitle,
+                          imageUrl: imageUrl,
                           tags: tags,
                           onToggleLike: () {
                             _toggleLike(

@@ -1,11 +1,14 @@
+import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:campus_connect/models/selected_gif.dart';
 import 'package:campus_connect/services/notification_service.dart';
 
 class FeedService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
   final NotificationService _notificationService = NotificationService();
 
   Stream<QuerySnapshot> getPostsStream() {
@@ -33,37 +36,78 @@ class FeedService {
   }
 
   Future<void> addPost(
-    String text, {
-    SelectedGif? gif,
-    List<String> tags = const [],
-  }) async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      throw Exception('Kein eingeloggter Benutzer gefunden.');
-    }
+  String text, {
+  SelectedGif? gif,
+  List<String> tags = const [],
+  Uint8List? imageBytes,
+}) async {
+  final user = _auth.currentUser;
 
-    final trimmed = text.trim();
-
-    if (trimmed.isEmpty && gif == null) {
-      throw Exception('Der Beitrag darf nicht leer sein.');
-    }
-
-    final displayName = await _getDisplayName(user);
-    final photoUrl = await _getPhotoUrl(user);
-
-    await _firestore.collection('posts').add({
-      'text': trimmed,
-      'userId': user.uid,
-      'userEmail': user.email,
-      'userName': displayName,
-      'photoUrl': photoUrl,
-      'createdAt': FieldValue.serverTimestamp(),
-      'editedAt': null,
-      'gif': gif?.toMap(),
-      'tags': tags,
-    });
+  if (user == null) {
+    throw Exception('Kein eingeloggter Benutzer gefunden.');
   }
 
+  final trimmed = text.trim();
+
+  if (trimmed.isEmpty && gif == null && imageBytes == null) {
+    throw Exception('Der Beitrag darf nicht leer sein.');
+  }
+
+  final displayName = await _getDisplayName(user);
+  final photoUrl = await _getPhotoUrl(user);
+
+  // Wir erzeugen die Dokument-ID schon vor dem Speichern.
+  // Dadurch können Post und Bild denselben eindeutigen Pfad verwenden.
+  final postRef = _firestore.collection('posts').doc();
+
+  String? imageUrl;
+
+  if (imageBytes != null) {
+    imageUrl = await _uploadPostImage(
+      userId: user.uid,
+      postId: postRef.id,
+      imageBytes: imageBytes,
+    );
+  }
+
+  await postRef.set({
+    'text': trimmed,
+    'userId': user.uid,
+    'userEmail': user.email,
+    'userName': displayName,
+    'photoUrl': photoUrl,
+    'createdAt': FieldValue.serverTimestamp(),
+    'editedAt': null,
+    'gif': gif?.toMap(),
+    'imageUrl': imageUrl,
+    'tags': tags,
+  });
+}
+
+Future<String> _uploadPostImage({
+  required String userId,
+  required String postId,
+  required Uint8List imageBytes,
+}) async {
+  final imageRef = _storage
+      .ref()
+      .child('post_images')
+      .child(userId)
+      .child('$postId.jpg');
+
+  await imageRef.putData(
+    imageBytes,
+    SettableMetadata(
+      contentType: 'image/jpeg',
+      customMetadata: {
+        'userId': userId,
+        'postId': postId,
+      },
+    ),
+  );
+
+  return imageRef.getDownloadURL();
+}
   Future<void> addComment({
     required String postId,
     required String text,

@@ -1,8 +1,13 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+
 import 'package:campus_connect/models/selected_gif.dart';
 import 'package:campus_connect/providers/feed_provider.dart';
 import 'package:campus_connect/utils/tag_utils.dart';
+
 import 'package:giphy_flutter_sdk/dto/giphy_media.dart';
 import 'package:giphy_flutter_sdk/giphy_dialog.dart';
 
@@ -20,6 +25,11 @@ class _PostInputState extends State<PostInput>
   final TextEditingController _tagController = TextEditingController();
   final List<String> _selectedTags = [];
 
+  final ImagePicker _imagePicker = ImagePicker();
+
+  Uint8List? _selectedImageBytes;
+  bool _isPickingImage = false;
+
   @override
   void initState() {
     super.initState();
@@ -35,6 +45,54 @@ class _PostInputState extends State<PostInput>
 
   void _openGiphyDialog() {
     GiphyDialog.instance.show();
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    if (_isPickingImage) return;
+
+    setState(() {
+      _isPickingImage = true;
+    });
+
+    try {
+      final image = await _imagePicker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
+
+      if (image == null) return;
+
+      final imageBytes = await image.readAsBytes();
+
+      if (!mounted) return;
+
+      context.read<FeedProvider>().removeSelectedGif();
+
+      setState(() {
+        _selectedImageBytes = imageBytes;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Das Bild konnte nicht ausgewählt werden: $error'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPickingImage = false;
+        });
+      }
+    }
+  }
+
+  void _removeSelectedImage() {
+    setState(() {
+      _selectedImageBytes = null;
+    });
   }
 
   void _addTag() {
@@ -79,6 +137,8 @@ class _PostInputState extends State<PostInput>
       return;
     }
 
+    _removeSelectedImage();
+
     context.read<FeedProvider>().setSelectedGif(
       SelectedGif(id: media.id, url: gifUrl, title: media.title ?? 'GIPHY GIF'),
     );
@@ -110,6 +170,36 @@ class _PostInputState extends State<PostInput>
               ),
             ),
 
+            if (_selectedImageBytes != null) ...[
+              const SizedBox(height: 12),
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.memory(
+                      _selectedImageBytes!,
+                      width: double.infinity,
+                      height: 280,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.black54,
+                      child: IconButton(
+                        tooltip: 'Bild entfernen',
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed:
+                            provider.isSending ? null : _removeSelectedImage,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
             if (selectedGif != null) ...[
               const SizedBox(height: 12),
               Stack(
@@ -128,8 +218,12 @@ class _PostInputState extends State<PostInput>
                     child: CircleAvatar(
                       backgroundColor: Colors.black54,
                       child: IconButton(
+                        tooltip: 'GIF entfernen',
                         icon: const Icon(Icons.close, color: Colors.white),
-                        onPressed: provider.removeSelectedGif,
+                        onPressed:
+                            provider.isSending
+                                ? null
+                                : provider.removeSelectedGif,
                       ),
                     ),
                   ),
@@ -193,7 +287,52 @@ class _PostInputState extends State<PostInput>
                   icon: const Icon(Icons.gif_box_outlined),
                   label: const Text('GIF'),
                 ),
+
+                const SizedBox(width: 8),
+
+                PopupMenuButton<ImageSource>(
+                  tooltip: 'Foto hinzufügen',
+                  enabled: !provider.isSending && !_isPickingImage,
+                  onSelected: _pickImage,
+                  itemBuilder:
+                      (context) => const [
+                        PopupMenuItem(
+                          value: ImageSource.camera,
+                          child: ListTile(
+                            leading: Icon(Icons.camera_alt_outlined),
+                            title: Text('Foto aufnehmen'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: ImageSource.gallery,
+                          child: ListTile(
+                            leading: Icon(Icons.photo_library_outlined),
+                            title: Text('Aus Galerie auswählen'),
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ],
+                  child: AbsorbPointer(
+                    child: OutlinedButton.icon(
+                      onPressed: () {},
+                      icon:
+                          _isPickingImage
+                              ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Icon(Icons.add_a_photo_outlined),
+                      label: const Text('Foto'),
+                    ),
+                  ),
+                ),
+
                 const Spacer(),
+
                 ElevatedButton.icon(
                   onPressed:
                       provider.isSending
@@ -201,6 +340,7 @@ class _PostInputState extends State<PostInput>
                           : () async {
                             final error = await provider.sendPost(
                               tags: normalizeTags(_selectedTags),
+                              imageBytes: _selectedImageBytes,
                             );
 
                             if (!context.mounted) return;
@@ -214,10 +354,8 @@ class _PostInputState extends State<PostInput>
 
                             FocusScope.of(context).unfocus();
 
-                            provider.controller.clear();
-                            provider.removeSelectedGif();
-
                             setState(() {
+                              _selectedImageBytes = null;
                               _selectedTags.clear();
                             });
 

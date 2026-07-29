@@ -263,6 +263,7 @@ class _HomeScreenView extends StatelessWidget {
                                 : null;
 
                         final formattedDate = _formatTimestamp(createdAt);
+                        final imageUrl = (data['imageUrl'] ?? '').toString();
 
                         final tags =
                             (data['tags'] as List<dynamic>? ?? [])
@@ -305,6 +306,7 @@ class _HomeScreenView extends StatelessWidget {
                                   editedAt: editedAt,
                                   gifUrl: gifUrl,
                                   gifTitle: gifTitle,
+                                  imageUrl: imageUrl,
                                   tags: tags,
                                   onTagTap: (tag) {
                                     Navigator.of(context).push(
