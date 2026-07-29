@@ -1,11 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
+import 'package:campus_connect/services/follow_service.dart';
 import 'package:campus_connect/widgets/user_posts_section.dart';
+import 'package:campus_connect/widgets/follow_stats.dart';
 
 class VisitedUserProfileScreen extends StatelessWidget {
   final String userId;
 
   const VisitedUserProfileScreen({super.key, required this.userId});
+
+  static final FollowService _followService = FollowService();
 
   String _getDisplayName(Map<String, dynamic> data) {
     return (data['displayName'] ??
@@ -23,14 +28,39 @@ class VisitedUserProfileScreen extends StatelessWidget {
     return (data['bio'] ?? '').toString().trim();
   }
 
+  Future<void> _toggleFollow({
+    required BuildContext context,
+    required bool isFollowing,
+  }) async {
+    try {
+      if (isFollowing) {
+        await _followService.unfollowUser(userId);
+      } else {
+        await _followService.followUser(userId);
+      }
+    } catch (error, stackTrace) {
+      debugPrint(error.toString());
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final userDoc =
         FirebaseFirestore.instance.collection('users').doc(userId).snapshots();
 
+    final currentUserId = _followService.currentUserId;
+    final isOwnProfile = currentUserId == userId;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Profil')),
-      body: StreamBuilder<DocumentSnapshot>(
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: userDoc,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -47,7 +77,7 @@ class VisitedUserProfileScreen extends StatelessWidget {
             return const Center(child: Text('Profil nicht gefunden.'));
           }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
+          final data = snapshot.data!.data()!;
 
           final displayName = _getDisplayName(data);
           final photoUrl = _getPhotoUrl(data);
@@ -79,6 +109,45 @@ class VisitedUserProfileScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+
+                const SizedBox(height: 20),
+
+               FollowStats(userId: userId),
+
+                if (!isOwnProfile) ...[
+                  const SizedBox(height: 20),
+
+                  StreamBuilder<bool>(
+                    stream: _followService.isFollowingStream(userId),
+                    builder: (context, snapshot) {
+                      final isFollowing = snapshot.data ?? false;
+
+                      return SizedBox(
+                        width: double.infinity,
+                        child:
+                            isFollowing
+                                ? OutlinedButton.icon(
+                                  onPressed:
+                                      () => _toggleFollow(
+                                        context: context,
+                                        isFollowing: true,
+                                      ),
+                                  icon: const Icon(Icons.person_remove),
+                                  label: const Text('Entfolgen'),
+                                )
+                                : FilledButton.icon(
+                                  onPressed:
+                                      () => _toggleFollow(
+                                        context: context,
+                                        isFollowing: false,
+                                      ),
+                                  icon: const Icon(Icons.person_add),
+                                  label: const Text('Folgen'),
+                                ),
+                      );
+                    },
+                  ),
+                ],
 
                 const SizedBox(height: 32),
 
@@ -118,19 +187,22 @@ class VisitedUserProfileScreen extends StatelessWidget {
                             avatar: const Icon(Icons.location_on, size: 18),
                             label: Text(location),
                           ),
-
                         if (cohort.isNotEmpty)
                           Chip(
                             avatar: const Icon(Icons.school, size: 18),
                             label: Text(cohort),
                           ),
-                        const SizedBox(height: 24),
-
-                        UserPostsSection(userId: userId, title: 'Beiträge'),
                       ],
                     ),
                   ),
                 ],
+
+                const SizedBox(height: 32),
+
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: UserPostsSection(userId: userId, title: 'Beiträge'),
+                ),
               ],
             ),
           );
