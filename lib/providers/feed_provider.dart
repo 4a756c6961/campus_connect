@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:campus_connect/services/feed_service.dart';
 import 'package:campus_connect/models/selected_gif.dart';
+import 'dart:typed_data';
+
 
 class FeedProvider with ChangeNotifier {
   final FeedService _feedService;
@@ -25,34 +27,38 @@ class FeedProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> sendPost({List<String> tags = const []}) async {
-    final text = controller.text.trim();
+  Future<String?> sendPost({
+  List<String> tags = const [],
+  Uint8List? imageBytes,
+}) async {
+  final text = controller.text.trim();
 
-    if (text.isEmpty && selectedGif == null) {
-      return 'Bitte gib einen Text ein oder wähle ein GIF aus.';
-    }
-
-    try {
-      isSending = true;
-      notifyListeners();
-
-      await _feedService.addPost(
-        text,
-        gif: selectedGif,
-        tags: tags,
-      );
-
-      controller.clear();
-      selectedGif = null;
-
-      return null;
-    } catch (e) {
-      return 'Fehler beim Senden: $e';
-    } finally {
-      isSending = false;
-      notifyListeners();
-    }
+  if (text.isEmpty && selectedGif == null && imageBytes == null) {
+    return 'Bitte gib einen Text ein oder wähle ein GIF oder Foto aus.';
   }
+
+  try {
+    isSending = true;
+    notifyListeners();
+
+    await _feedService.addPost(
+      text,
+      gif: selectedGif,
+      tags: tags,
+      imageBytes: imageBytes,
+    );
+
+    controller.clear();
+    selectedGif = null;
+
+    return null;
+  } catch (e) {
+    return 'Fehler beim Senden: $e';
+  } finally {
+    isSending = false;
+    notifyListeners();
+  }
+}
 
   Future<String?> toggleLike(String postId) async {
     try {

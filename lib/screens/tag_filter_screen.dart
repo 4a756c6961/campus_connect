@@ -55,6 +55,7 @@ class TagFilterScreen extends StatelessWidget {
     required String authorPhotoUrl,
     required Timestamp? createdAt,
     required String authorUserId,
+    required String imageUrl,
     required List<String> tags,
   }) {
     Navigator.of(context).push(
@@ -135,6 +136,7 @@ class TagFilterScreen extends StatelessWidget {
               final userName = (data['userName'] ?? '').toString();
               final userId = (data['userId'] ?? '').toString();
               final photoUrl = (data['photoUrl'] ?? '').toString();
+              final imageUrl = (data['imageUrl'] ?? '').toString();
 
               final gifDataRaw = data['gif'];
               final gifData =
@@ -197,6 +199,7 @@ class TagFilterScreen extends StatelessWidget {
                         editedAt: editedAt,
                         gifUrl: gifUrl,
                         gifTitle: gifTitle,
+                        imageUrl: imageUrl,
                         tags: tags,
                         onTagTap: (selectedTag) {
                           if (selectedTag == cleanTag) return;
@@ -231,6 +234,7 @@ class TagFilterScreen extends StatelessWidget {
                             authorPhotoUrl: photoUrl,
                             createdAt: createdAt,
                             authorUserId: userId,
+                            imageUrl: imageUrl,
                             tags: tags,
                           );
                         },

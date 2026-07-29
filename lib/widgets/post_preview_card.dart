@@ -7,6 +7,7 @@ class PostPreviewCard extends StatelessWidget {
   final String postText;
   final String gifUrl;
   final String gifTitle;
+  final String imageUrl;
   final List<String> tags;
   final VoidCallback? onAuthorTap;
 
@@ -18,6 +19,7 @@ class PostPreviewCard extends StatelessWidget {
     required this.postText,
     this.gifUrl = '',
     this.gifTitle = '',
+    this.imageUrl = '',
     this.tags = const [],
     this.onAuthorTap,
   });
@@ -91,6 +93,38 @@ class PostPreviewCard extends StatelessWidget {
                         visualDensity: VisualDensity.compact,
                       );
                     }).toList(),
+              ),
+            ],
+
+            if (imageUrl.trim().isNotEmpty) ...[
+              if (hasText || visibleTags.isNotEmpty)
+                const SizedBox(height: 12)
+              else
+                const SizedBox(height: 16),
+
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageUrl.trim(),
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) {
+                      return child;
+                    }
+
+                    return const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text('Bild konnte nicht geladen werden.'),
+                    );
+                  },
+                ),
               ),
             ],
 
