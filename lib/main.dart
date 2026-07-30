@@ -11,6 +11,8 @@ import 'screens/auth_gate.dart';
 import 'screens/auth_screen.dart';
 import 'screens/main_navigation_screen.dart';
 import 'providers/theme_provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'services/push_notification_service.dart';
 
 
 void _configureGiphy() {
@@ -43,11 +45,30 @@ void _configureGiphy() {
   }
 }
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(
+  RemoteMessage message,
+) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+    FirebaseMessaging.onBackgroundMessage(
+    _firebaseMessagingBackgroundHandler,
+  );
+
+  debugPrint(
+    'Push-Nachricht im Hintergrund erhalten: ${message.messageId}',
+  );
+}
+
 
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+    final pushNotificationService = PushNotificationService();
+  pushNotificationService.initialize();
   _configureGiphy();
   runApp(const MyApp());
 }
