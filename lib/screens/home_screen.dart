@@ -13,6 +13,7 @@ import 'package:campus_connect/screens/tag_filter_screen.dart';
 import 'package:campus_connect/screens/notifications_screen.dart';
 import 'package:campus_connect/services/notification_service.dart';
 import 'package:campus_connect/services/follow_service.dart';
+import 'package:campus_connect/services/hidden_post.dart';
 
 class HomeScreen extends StatelessWidget {
   static const routeName = '/home';
@@ -31,58 +32,98 @@ class _HomeScreenView extends StatelessWidget {
   static final FeedService _feedService = FeedService();
   static final NotificationService _notificationService = NotificationService();
   static final FollowService _followService = FollowService();
+  static final HiddenPostService _hiddenPostService = HiddenPostService();
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'wird geladen...';
     return DateFormat('dd.MM.yyyy, HH:mm').format(timestamp.toDate());
   }
+
   double _calculateFeedScore({
-  required Timestamp? createdAt,
-  required bool isFollowed,
-}) {
-  final createdDate =
-      createdAt?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0);
+    required Timestamp? createdAt,
+    required bool isFollowed,
+  }) {
+    final createdDate =
+        createdAt?.toDate() ?? DateTime.fromMillisecondsSinceEpoch(0);
 
-  final ageInHours =
-      DateTime.now().difference(createdDate).inHours.toDouble();
+    final ageInHours =
+        DateTime.now().difference(createdDate).inHours.toDouble();
 
-  const followBonus = 24.0;
+    const followBonus = 24.0;
 
-  return (isFollowed ? followBonus : 0.0) - ageInHours;
-}
+    return (isFollowed ? followBonus : 0.0) - ageInHours;
+  }
 
   void _sortPostsByFollowing(
-  List<QueryDocumentSnapshot> posts,
-  Set<String> followedUserIds,
-) {
-  posts.sort((a, b) {
-    final aData = a.data() as Map<String, dynamic>;
-    final bData = b.data() as Map<String, dynamic>;
+    List<QueryDocumentSnapshot> posts,
+    Set<String> followedUserIds,
+  ) {
+    posts.sort((a, b) {
+      final aData = a.data() as Map<String, dynamic>;
+      final bData = b.data() as Map<String, dynamic>;
 
-    final aUserId = (aData['userId'] ?? '').toString();
-    final bUserId = (bData['userId'] ?? '').toString();
+      final aUserId = (aData['userId'] ?? '').toString();
+      final bUserId = (bData['userId'] ?? '').toString();
 
-    final aCreatedAtRaw = aData['createdAt'];
-    final bCreatedAtRaw = bData['createdAt'];
+      final aCreatedAtRaw = aData['createdAt'];
+      final bCreatedAtRaw = bData['createdAt'];
 
-    final aCreatedAt =
-        aCreatedAtRaw is Timestamp ? aCreatedAtRaw : null;
+      final aCreatedAt = aCreatedAtRaw is Timestamp ? aCreatedAtRaw : null;
 
-    final bCreatedAt =
-        bCreatedAtRaw is Timestamp ? bCreatedAtRaw : null;
+      final bCreatedAt = bCreatedAtRaw is Timestamp ? bCreatedAtRaw : null;
 
-    final aScore = _calculateFeedScore(
-      createdAt: aCreatedAt,
-      isFollowed: followedUserIds.contains(aUserId),
-    );
+      final aScore = _calculateFeedScore(
+        createdAt: aCreatedAt,
+        isFollowed: followedUserIds.contains(aUserId),
+      );
 
-    final bScore = _calculateFeedScore(
-      createdAt: bCreatedAt,
-      isFollowed: followedUserIds.contains(bUserId),
-    );
+      final bScore = _calculateFeedScore(
+        createdAt: bCreatedAt,
+        isFollowed: followedUserIds.contains(bUserId),
+      );
 
-    return bScore.compareTo(aScore);
-  });
-}
+      return bScore.compareTo(aScore);
+    });
+  }
+
+  Future<void> _handleHidePost(BuildContext context, String postId) async {
+    try {
+      await _hiddenPostService.hidePost(postId);
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: const Text('Beitrag wurde verborgen.'),
+            action: SnackBarAction(
+              label: 'Rückgängig',
+              onPressed: () async {
+                try {
+                  await _hiddenPostService.unhidePost(postId);
+                } catch (e) {
+                  if (!context.mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Beitrag konnte nicht wiederhergestellt werden: $e',
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+        );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Beitrag konnte nicht verborgen werden: $e')),
+      );
+    }
+  }
 
   Future<void> _handleToggleLike(BuildContext context, String postId) async {
     final message = await context.read<FeedProvider>().toggleLike(postId);
@@ -200,146 +241,193 @@ class _HomeScreenView extends StatelessWidget {
 
                 final followedUserIds = followingSnapshot.data ?? <String>{};
 
-                return StreamBuilder<QuerySnapshot>(
-                  stream: postsStream,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Fehler: ${snapshot.error}'));
-                    }
-
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final docs = List<QueryDocumentSnapshot>.from(
-                      snapshot.data?.docs ?? [],
-                    );
-
-                    _sortPostsByFollowing(docs, followedUserIds);
-
-                    if (docs.isEmpty) {
-                      return const Center(
-                        child: Text('Dein Feed sieht noch leer aus 🤭'),
+                return StreamBuilder<Set<String>>(
+                  stream: _hiddenPostService.hiddenPostIdsStream(),
+                  builder: (context, hiddenPostsSnapshot) {
+                    if (hiddenPostsSnapshot.hasError) {
+                      return Center(
+                        child: Text(
+                          'Verborgene Beiträge konnten nicht geladen werden: '
+                          '${hiddenPostsSnapshot.error}',
+                        ),
                       );
                     }
 
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: docs.length,
-                      itemBuilder: (context, i) {
-                        final doc = docs[i];
-                        final data = doc.data() as Map<String, dynamic>;
+                    if (hiddenPostsSnapshot.connectionState ==
+                            ConnectionState.waiting &&
+                        !hiddenPostsSnapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                        final text = (data['text'] ?? '').toString();
-                        final email = (data['userEmail'] ?? '').toString();
-                        final userName = (data['userName'] ?? '').toString();
-                        final userId = (data['userId'] ?? '').toString();
-                        final photoUrl = (data['photoUrl'] ?? '').toString();
+                    final hiddenPostIds =
+                        hiddenPostsSnapshot.data ?? <String>{};
 
-                        final gifDataRaw = data['gif'];
-                        final gifData =
-                            gifDataRaw is Map<String, dynamic>
-                                ? gifDataRaw
-                                : null;
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: postsStream,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Text('Fehler: ${snapshot.error}'),
+                          );
+                        }
 
-                        final gifUrl = (gifData?['url'] ?? '').toString();
-                        final gifTitle = (gifData?['title'] ?? '').toString();
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
 
-                        final author =
-                            userName.isNotEmpty
-                                ? userName
-                                : email.isNotEmpty
-                                ? email
-                                : 'Unbekannt';
+                        final docs = List<QueryDocumentSnapshot>.from(
+                          snapshot.data?.docs ?? [],
+                        )..removeWhere((doc) => hiddenPostIds.contains(doc.id));
 
-                        final createdAtRaw = data['createdAt'];
-                        final createdAt =
-                            createdAtRaw is Timestamp ? createdAtRaw : null;
+                        _sortPostsByFollowing(docs, followedUserIds);
 
-                        final editedAtRaw = data['editedAt'];
-                        final editedAt =
-                            editedAtRaw is Timestamp
-                                ? editedAtRaw.toDate()
-                                : null;
+                        if (docs.isEmpty) {
+                          return const Center(
+                            child: Text('Dein Feed sieht noch leer aus 🤭'),
+                          );
+                        }
 
-                        final formattedDate = _formatTimestamp(createdAt);
-                        final imageUrl = (data['imageUrl'] ?? '').toString();
+                        return ListView.builder(
+                          padding: const EdgeInsets.all(12),
+                          itemCount: docs.length,
+                          itemBuilder: (context, i) {
+                            final doc = docs[i];
+                            final data = doc.data() as Map<String, dynamic>;
 
-                        final tags =
-                            (data['tags'] as List<dynamic>? ?? [])
-                                .map((tag) => tag.toString())
-                                .where((tag) => tag.trim().isNotEmpty)
-                                .toList();
+                            final text = (data['text'] ?? '').toString();
+                            final email = (data['userEmail'] ?? '').toString();
+                            final userName =
+                                (data['userName'] ?? '').toString();
+                            final userId = (data['userId'] ?? '').toString();
+                            final photoUrl =
+                                (data['photoUrl'] ?? '').toString();
 
-                        return StreamBuilder<QuerySnapshot>(
-                          stream: _feedService.getLikesStream(doc.id),
-                          builder: (context, likeSnapshot) {
-                            final likeDocs = likeSnapshot.data?.docs ?? [];
+                            final gifDataRaw = data['gif'];
+                            final gifData =
+                                gifDataRaw is Map<String, dynamic>
+                                    ? gifDataRaw
+                                    : null;
 
-                            final currentUser =
-                                FirebaseAuth.instance.currentUser;
+                            final gifUrl = (gifData?['url'] ?? '').toString();
+                            final gifTitle =
+                                (gifData?['title'] ?? '').toString();
 
-                            final likeCount = likeDocs.length;
+                            final author =
+                                userName.isNotEmpty
+                                    ? userName
+                                    : email.isNotEmpty
+                                    ? email
+                                    : 'Unbekannt';
 
-                            final hasLiked =
-                                currentUser != null &&
-                                likeDocs.any(
-                                  (likeDoc) => likeDoc.id == currentUser.uid,
-                                );
+                            final createdAtRaw = data['createdAt'];
+                            final createdAt =
+                                createdAtRaw is Timestamp ? createdAtRaw : null;
+
+                            final editedAtRaw = data['editedAt'];
+                            final editedAt =
+                                editedAtRaw is Timestamp
+                                    ? editedAtRaw.toDate()
+                                    : null;
+
+                            final formattedDate = _formatTimestamp(createdAt);
+                            final imageUrl =
+                                (data['imageUrl'] ?? '').toString();
+
+                            final tags =
+                                (data['tags'] as List<dynamic>? ?? [])
+                                    .map((tag) => tag.toString())
+                                    .where((tag) => tag.trim().isNotEmpty)
+                                    .toList();
 
                             return StreamBuilder<QuerySnapshot>(
-                              stream: _feedService.getCommentsStream(doc.id),
-                              builder: (context, commentSnapshot) {
-                                final liveCommentCount =
-                                    commentSnapshot.data?.docs.length ?? 0;
+                              stream: _feedService.getLikesStream(doc.id),
+                              builder: (context, likeSnapshot) {
+                                final likeDocs = likeSnapshot.data?.docs ?? [];
 
-                                return PostCard(
-                                  postId: doc.id,
-                                  text: text,
-                                  userId: userId,
-                                  authorName: author,
-                                  photoUrl: photoUrl,
-                                  formattedDate: formattedDate,
-                                  likeCount: likeCount,
-                                  commentCount: liveCommentCount,
-                                  hasLiked: hasLiked,
-                                  editedAt: editedAt,
-                                  gifUrl: gifUrl,
-                                  gifTitle: gifTitle,
-                                  imageUrl: imageUrl,
-                                  tags: tags,
-                                  onTagTap: (tag) {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder:
-                                            (_) => TagFilterScreen(tag: tag),
-                                      ),
-                                    );
-                                  },
-                                  onToggleLike:
-                                      () => _handleToggleLike(context, doc.id),
-                                  onAuthorTap: () {
-                                    if (userId.isEmpty) return;
+                                final currentUser =
+                                    FirebaseAuth.instance.currentUser;
 
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder:
-                                            (_) => VisitedUserProfileScreen(
-                                              userId: userId,
-                                            ),
-                                      ),
+                                final likeCount = likeDocs.length;
+
+                                final hasLiked =
+                                    currentUser != null &&
+                                    likeDocs.any(
+                                      (likeDoc) =>
+                                          likeDoc.id == currentUser.uid,
                                     );
-                                  },
-                                  onOpenComments: () {
-                                    _openComments(
-                                      context,
+
+                                return StreamBuilder<QuerySnapshot>(
+                                  stream: _feedService.getCommentsStream(
+                                    doc.id,
+                                  ),
+                                  builder: (context, commentSnapshot) {
+                                    final liveCommentCount =
+                                        commentSnapshot.data?.docs.length ?? 0;
+
+                                    return PostCard(
                                       postId: doc.id,
-                                      postText: text,
+                                      text: text,
+                                      userId: userId,
                                       authorName: author,
-                                      authorPhotoUrl: photoUrl,
-                                      createdAt: createdAt,
-                                      authorUserId: userId,
+                                      photoUrl: photoUrl,
+                                      formattedDate: formattedDate,
+                                      likeCount: likeCount,
+                                      commentCount: liveCommentCount,
+                                      hasLiked: hasLiked,
+                                      editedAt: editedAt,
+                                      gifUrl: gifUrl,
+                                      gifTitle: gifTitle,
+                                      imageUrl: imageUrl,
                                       tags: tags,
+                                      onHidePost:
+                                          currentUser == null ||
+                                                  currentUser.uid == userId
+                                              ? null
+                                              : () => _handleHidePost(
+                                                context,
+                                                doc.id,
+                                              ),
+                                      onTagTap: (tag) {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) =>
+                                                    TagFilterScreen(tag: tag),
+                                          ),
+                                        );
+                                      },
+                                      onToggleLike:
+                                          () => _handleToggleLike(
+                                            context,
+                                            doc.id,
+                                          ),
+                                      onAuthorTap: () {
+                                        if (userId.isEmpty) return;
+
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) => VisitedUserProfileScreen(
+                                                  userId: userId,
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                      onOpenComments: () {
+                                        _openComments(
+                                          context,
+                                          postId: doc.id,
+                                          postText: text,
+                                          authorName: author,
+                                          authorPhotoUrl: photoUrl,
+                                          createdAt: createdAt,
+                                          authorUserId: userId,
+                                          tags: tags,
+                                        );
+                                      },
                                     );
                                   },
                                 );
