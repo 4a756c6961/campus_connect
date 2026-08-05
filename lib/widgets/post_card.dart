@@ -25,6 +25,7 @@ class PostCard extends StatelessWidget {
   final String imageUrl;
   final List<String> tags;
   final ValueChanged<String>? onTagTap;
+  final VoidCallback? onHidePost;
 
   const PostCard({
     super.key,
@@ -44,6 +45,7 @@ class PostCard extends StatelessWidget {
     required this.imageUrl,
     required this.gifUrl,
     required this.gifTitle,
+    this.onHidePost,
     this.onTagTap,
     this.tags = const [],
   });
@@ -106,31 +108,62 @@ class PostCard extends StatelessWidget {
                   ),
                 ),
 
-                if (isOwner)
+                                if (isOwner || onHidePost != null)
                   PopupMenuButton<String>(
+                    tooltip: 'Beitragsoptionen',
                     onSelected: (value) async {
                       if (value == 'edit') {
                         await _showEditDialog(context);
                       } else if (value == 'delete') {
                         await _showDeleteDialog(context);
+                      } else if (value == 'hide') {
+                        onHidePost?.call();
                       }
                     },
-                    itemBuilder:
-                        (context) => const [
+                    itemBuilder: (context) {
+                      if (isOwner) {
+                        return const [
                           PopupMenuItem(
                             value: 'edit',
-                            child: Text('Beitrag bearbeiten'),
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_outlined),
+                                SizedBox(width: 10),
+                                Text('Beitrag bearbeiten'),
+                              ],
+                            ),
                           ),
                           PopupMenuItem(
                             value: 'delete',
-                            child: Text('Beitrag löschen'),
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline),
+                                SizedBox(width: 10),
+                                Text('Beitrag löschen'),
+                              ],
+                            ),
                           ),
-                        ],
+                        ];
+                      }
+
+                      return const [
+                        PopupMenuItem(
+                          value: 'hide',
+                          child: Row(
+                            children: [
+                              Icon(Icons.visibility_off_outlined),
+                              SizedBox(width: 10),
+                              Text('Beitrag verbergen'),
+                            ],
+                          ),
+                        ),
+                      ];
+                    },
                   ),
               ],
             ),
 
-            const SizedBox(height: 8),
+           const SizedBox(height: 8),
 
             if (text.trim().isNotEmpty) Text(text),
 
