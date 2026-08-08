@@ -26,6 +26,7 @@ class PostCard extends StatelessWidget {
   final List<String> tags;
   final ValueChanged<String>? onTagTap;
   final VoidCallback? onHidePost;
+  final VoidCallback? onReportPost;
 
   const PostCard({
     super.key,
@@ -46,6 +47,7 @@ class PostCard extends StatelessWidget {
     required this.gifUrl,
     required this.gifTitle,
     this.onHidePost,
+    this.onReportPost,
     this.onTagTap,
     this.tags = const [],
   });
@@ -108,7 +110,7 @@ class PostCard extends StatelessWidget {
                   ),
                 ),
 
-                                if (isOwner || onHidePost != null)
+                if (isOwner || onHidePost != null || onReportPost != null)
                   PopupMenuButton<String>(
                     tooltip: 'Beitragsoptionen',
                     onSelected: (value) async {
@@ -118,52 +120,70 @@ class PostCard extends StatelessWidget {
                         await _showDeleteDialog(context);
                       } else if (value == 'hide') {
                         onHidePost?.call();
+                      } else if (value == 'report') {
+                        onReportPost?.call();
                       }
                     },
                     itemBuilder: (context) {
                       if (isOwner) {
-                        return const [
-                          PopupMenuItem(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit_outlined),
-                                SizedBox(width: 10),
-                                Text('Beitrag bearbeiten'),
-                              ],
+                        return [
+                          if (onHidePost != null)
+                            const PopupMenuItem(
+                              value: 'hide',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.visibility_off_outlined),
+                                  SizedBox(width: 10),
+                                  Text('Beitrag verbergen'),
+                                ],
+                              ),
                             ),
-                          ),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete_outline),
-                                SizedBox(width: 10),
-                                Text('Beitrag löschen'),
-                              ],
+
+                          if (onReportPost != null)
+                            const PopupMenuItem(
+                              value: 'report',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.flag_outlined),
+                                  SizedBox(width: 10),
+                                  Text('Beitrag melden'),
+                                ],
+                              ),
                             ),
-                          ),
                         ];
                       }
 
-                      return const [
-                        PopupMenuItem(
-                          value: 'hide',
-                          child: Row(
-                            children: [
-                              Icon(Icons.visibility_off_outlined),
-                              SizedBox(width: 10),
-                              Text('Beitrag verbergen'),
-                            ],
+                      return [
+                        if (onHidePost != null)
+                          const PopupMenuItem(
+                            value: 'hide',
+                            child: Row(
+                              children: [
+                                Icon(Icons.visibility_off_outlined),
+                                SizedBox(width: 10),
+                                Text('Beitrag verbergen'),
+                              ],
+                            ),
                           ),
-                        ),
+
+                        if (onReportPost != null)
+                          const PopupMenuItem(
+                            value: 'report',
+                            child: Row(
+                              children: [
+                                Icon(Icons.flag_outlined),
+                                SizedBox(width: 10),
+                                Text('Beitrag melden'),
+                              ],
+                            ),
+                          ),
                       ];
                     },
                   ),
               ],
             ),
 
-           const SizedBox(height: 8),
+            const SizedBox(height: 8),
 
             if (text.trim().isNotEmpty) Text(text),
 

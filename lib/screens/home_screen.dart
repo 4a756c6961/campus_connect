@@ -14,6 +14,7 @@ import 'package:campus_connect/screens/notifications_screen.dart';
 import 'package:campus_connect/services/notification_service.dart';
 import 'package:campus_connect/services/follow_service.dart';
 import 'package:campus_connect/services/hidden_post.dart';
+import 'package:campus_connect/services/report_service.dart';
 
 class HomeScreen extends StatelessWidget {
   static const routeName = '/home';
@@ -33,6 +34,7 @@ class _HomeScreenView extends StatelessWidget {
   static final NotificationService _notificationService = NotificationService();
   static final FollowService _followService = FollowService();
   static final HiddenPostService _hiddenPostService = HiddenPostService();
+  static final ReportService _reportService = ReportService();
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'wird geladen...';
     return DateFormat('dd.MM.yyyy, HH:mm').format(timestamp.toDate());
@@ -121,6 +123,119 @@ class _HomeScreenView extends StatelessWidget {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Beitrag konnte nicht verborgen werden: $e')),
+      );
+    }
+  }
+
+  Future<void> _showReportDialog(
+    BuildContext context,
+    String postId,
+    String reportedUserId,
+  ) async {
+    String? selectedReason;
+
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Beitrag melden'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Warum möchtest du diesen Beitrag melden?'),
+                  const SizedBox(height: 12),
+
+                  RadioListTile<String>(
+                    title: const Text('Spam'),
+                    value: 'spam',
+                    groupValue: selectedReason,
+                    onChanged: (value) {
+                      setState(() => selectedReason = value);
+                    },
+                  ),
+
+                  RadioListTile<String>(
+                    title: const Text('Beleidigung oder Belästigung'),
+                    value: 'harassment',
+                    groupValue: selectedReason,
+                    onChanged: (value) {
+                      setState(() => selectedReason = value);
+                    },
+                  ),
+
+                  RadioListTile<String>(
+                    title: const Text('Unangemessener Inhalt'),
+                    value: 'inappropriate',
+                    groupValue: selectedReason,
+                    onChanged: (value) {
+                      setState(() => selectedReason = value);
+                    },
+                  ),
+
+                  RadioListTile<String>(
+                    title: const Text('Sonstiges'),
+                    value: 'other',
+                    groupValue: selectedReason,
+                    onChanged: (value) {
+                      setState(() => selectedReason = value);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(dialogContext).pop();
+                  },
+                  child: const Text('Abbrechen'),
+                ),
+                ElevatedButton(
+                  onPressed:
+                      selectedReason == null
+                          ? null
+                          : () {
+                            Navigator.of(dialogContext).pop(selectedReason);
+                          },
+                  child: const Text('Melden'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (reason == null) return;
+
+    if (!context.mounted) return;
+
+    try {
+      await _reportService.reportPost(
+        postId: postId,
+        reportedUserId: reportedUserId,
+        reason: reason,
+      );
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Beitrag wurde gemeldet.')));
+    } on ReportAlreadyExistsException {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Du hast diesen Beitrag bereits gemeldet.'),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Meldung konnte nicht gesendet werden: $e')),
       );
     }
   }
@@ -382,6 +497,16 @@ class _HomeScreenView extends StatelessWidget {
                                       gifTitle: gifTitle,
                                       imageUrl: imageUrl,
                                       tags: tags,
+                                      onReportPost:
+                                          currentUser == null ||
+                                                  currentUser.uid == userId
+                                              ? null
+                                              : () => _showReportDialog(
+                                                context,
+                                                doc.id,
+                                                userId,
+                                              ),
+
                                       onHidePost:
                                           currentUser == null ||
                                                   currentUser.uid == userId
