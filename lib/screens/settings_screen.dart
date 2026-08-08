@@ -1,11 +1,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
+import 'package:campus_connect/screens/admin_reports_screen.dart';
+import 'package:campus_connect/services/admin_service.dart';
 import 'package:campus_connect/providers/theme_provider.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
+  static final AdminService _adminService = AdminService();
 
   Future<void> _confirmLogout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
@@ -43,9 +45,7 @@ class SettingsScreen extends StatelessWidget {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            error.message ?? 'Die Abmeldung ist fehlgeschlagen.',
-          ),
+          content: Text(error.message ?? 'Die Abmeldung ist fehlgeschlagen.'),
         ),
       );
     }
@@ -56,25 +56,18 @@ class SettingsScreen extends StatelessWidget {
     final themeProvider = context.watch<ThemeProvider>();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Einstellungen'),
-      ),
+      appBar: AppBar(title: const Text('Einstellungen')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text(
-            'Darstellung',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('Darstellung', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           Card(
             child: Column(
               children: [
                 RadioListTile<ThemeMode>(
                   title: const Text('Systemeinstellung'),
-                  secondary: const Icon(
-                    Icons.settings_suggest_outlined,
-                  ),
+                  secondary: const Icon(Icons.settings_suggest_outlined),
                   value: ThemeMode.system,
                   groupValue: themeProvider.themeMode,
                   onChanged: (value) {
@@ -109,10 +102,7 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Text(
-            'Konto',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text('Konto', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
           Card(
             child: ListTile(
@@ -122,9 +112,7 @@ class SettingsScreen extends StatelessWidget {
               ),
               title: Text(
                 'Abmelden',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                ),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
               subtitle: const Text(
                 'Du wirst zum Anmeldebildschirm zurückgeleitet.',
@@ -132,6 +120,28 @@ class SettingsScreen extends StatelessWidget {
               trailing: const Icon(Icons.chevron_right),
               onTap: () => _confirmLogout(context),
             ),
+          ),
+          FutureBuilder<bool>(
+            future: _adminService.isCurrentUserAdmin(),
+            builder: (context, snapshot) {
+              final isAdmin = snapshot.data ?? false;
+
+              if (!isAdmin) {
+                return const SizedBox.shrink();
+              }
+
+              return ListTile(
+                leading: const Icon(Icons.admin_panel_settings_outlined),
+                title: const Text('Administration'),
+                subtitle: const Text('Gemeldete Beiträge verwalten'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => AdminReportsScreen()),
+                  );
+                },
+              );
+            },
           ),
         ],
       ),
