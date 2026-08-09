@@ -27,6 +27,8 @@ class PostCard extends StatelessWidget {
   final ValueChanged<String>? onTagTap;
   final VoidCallback? onHidePost;
   final VoidCallback? onReportPost;
+  final bool isPinned;
+  final VoidCallback? onTogglePin;
 
   const PostCard({
     super.key,
@@ -50,6 +52,8 @@ class PostCard extends StatelessWidget {
     this.onReportPost,
     this.onTagTap,
     this.tags = const [],
+    this.isPinned = false,
+    this.onTogglePin,
   });
 
   @override
@@ -110,6 +114,18 @@ class PostCard extends StatelessWidget {
                   ),
                 ),
 
+                if (isPinned)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4, right: 4),
+                    child: Tooltip(
+                      message: 'Im Profil fixiert',
+                      child: Icon(
+                        Icons.push_pin,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
                 if (isOwner || onHidePost != null || onReportPost != null)
                   PopupMenuButton<String>(
                     tooltip: 'Beitragsoptionen',
@@ -118,6 +134,8 @@ class PostCard extends StatelessWidget {
                         await _showEditDialog(context);
                       } else if (value == 'delete') {
                         await _showDeleteDialog(context);
+                      } else if (value == 'pin') {
+                        onTogglePin?.call();
                       } else if (value == 'hide') {
                         onHidePost?.call();
                       } else if (value == 'report') {
@@ -127,6 +145,25 @@ class PostCard extends StatelessWidget {
                     itemBuilder: (context) {
                       if (isOwner) {
                         return [
+                          if (onTogglePin != null)
+                            PopupMenuItem<String>(
+                              value: 'pin',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isPinned
+                                        ? Icons.push_pin
+                                        : Icons.push_pin_outlined,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(
+                                    isPinned
+                                        ? 'Fixierung aufheben'
+                                        : 'Im Profil fixieren',
+                                  ),
+                                ],
+                              ),
+                            ),
                           if (onHidePost != null)
                             const PopupMenuItem(
                               value: 'hide',

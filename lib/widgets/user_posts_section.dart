@@ -20,9 +20,7 @@ class UserPostsSection extends StatelessWidget {
   String _formatTimestamp(Timestamp? timestamp) {
     if (timestamp == null) return 'gerade eben';
 
-    return DateFormat(
-      'dd.MM.yyyy, HH:mm',
-    ).format(timestamp.toDate());
+    return DateFormat('dd.MM.yyyy, HH:mm').format(timestamp.toDate());
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> _subcollectionStream(
@@ -55,15 +53,15 @@ class UserPostsSection extends StatelessWidget {
   Map<String, String> _readGifData(Map<String, dynamic> postData) {
     final gifRaw = postData['gif'];
 
-    final gifData = gifRaw is Map
-        ? Map<String, dynamic>.from(gifRaw)
-        : <String, dynamic>{};
+    final gifData =
+        gifRaw is Map ? Map<String, dynamic>.from(gifRaw) : <String, dynamic>{};
 
     final selectedGifRaw = postData['selectedGif'];
 
-    final selectedGifData = selectedGifRaw is Map
-        ? Map<String, dynamic>.from(selectedGifRaw)
-        : <String, dynamic>{};
+    final selectedGifData =
+        selectedGifRaw is Map
+            ? Map<String, dynamic>.from(selectedGifRaw)
+            : <String, dynamic>{};
 
     String nestedImageUrl = '';
 
@@ -79,28 +77,27 @@ class UserPostsSection extends StatelessWidget {
       }
     }
 
-    final gifUrl = (
-      postData['gifUrl'] ??
-      gifData['url'] ??
-      gifData['gifUrl'] ??
-      selectedGifData['url'] ??
-      selectedGifData['gifUrl'] ??
-      nestedImageUrl
-    ).toString().trim();
+    final gifUrl =
+        (postData['gifUrl'] ??
+                gifData['url'] ??
+                gifData['gifUrl'] ??
+                selectedGifData['url'] ??
+                selectedGifData['gifUrl'] ??
+                nestedImageUrl)
+            .toString()
+            .trim();
 
-    final gifTitle = (
-      postData['gifTitle'] ??
-      gifData['title'] ??
-      gifData['name'] ??
-      selectedGifData['title'] ??
-      selectedGifData['name'] ??
-      ''
-    ).toString().trim();
+    final gifTitle =
+        (postData['gifTitle'] ??
+                gifData['title'] ??
+                gifData['name'] ??
+                selectedGifData['title'] ??
+                selectedGifData['name'] ??
+                '')
+            .toString()
+            .trim();
 
-    return {
-      'url': gifUrl,
-      'title': gifTitle,
-    };
+    return {'url': gifUrl, 'title': gifTitle};
   }
 
   bool _hasCurrentUserLiked(
@@ -120,18 +117,13 @@ class UserPostsSection extends StatelessWidget {
     });
   }
 
-  Future<void> _toggleLike(
-    BuildContext context,
-    String postId,
-  ) async {
+  Future<void> _toggleLike(BuildContext context, String postId) async {
     final currentUser = FirebaseAuth.instance.currentUser;
 
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Du musst eingeloggt sein, um Beiträge zu liken.',
-          ),
+          content: Text('Du musst eingeloggt sein, um Beiträge zu liken.'),
         ),
       );
       return;
@@ -152,10 +144,11 @@ class UserPostsSection extends StatelessWidget {
         return;
       }
 
-      final existingLegacyLikes = await likesCollection
-          .where('userId', isEqualTo: currentUser.uid)
-          .limit(1)
-          .get();
+      final existingLegacyLikes =
+          await likesCollection
+              .where('userId', isEqualTo: currentUser.uid)
+              .limit(1)
+              .get();
 
       if (existingLegacyLikes.docs.isNotEmpty) {
         await existingLegacyLikes.docs.first.reference.delete();
@@ -171,9 +164,73 @@ class UserPostsSection extends StatelessWidget {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Like konnte nicht aktualisiert werden: $error',
+          content: Text('Like konnte nicht aktualisiert werden: $error'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _togglePin({
+    required BuildContext context,
+    required String postId,
+    required bool isPinned,
+  }) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      return;
+    }
+
+    try {
+      final postReference = FirebaseFirestore.instance
+          .collection('posts')
+          .doc(postId);
+
+      // Fixierung aufheben
+      if (isPinned) {
+        await postReference.update({'pinnedAt': FieldValue.delete()});
+
+        return;
+      }
+
+      // Alle eigenen Beiträge laden, um die Anzahl
+      // der bereits fixierten Beiträge zu prüfen.
+      final userPostsSnapshot =
+          await FirebaseFirestore.instance
+              .collection('posts')
+              .where('userId', isEqualTo: currentUser.uid)
+              .get();
+
+      final pinnedPostsCount =
+          userPostsSnapshot.docs.where((document) {
+            final data = document.data();
+
+            return data['pinnedAt'] is Timestamp;
+          }).length;
+
+      // Maximal drei fixierte Beiträge erlauben.
+      if (pinnedPostsCount >= 3) {
+        if (!context.mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Du kannst maximal drei Beiträge im Profil fixieren.',
+            ),
           ),
+        );
+
+        return;
+      }
+
+      // Beitrag fixieren
+      await postReference.update({'pinnedAt': FieldValue.serverTimestamp()});
+    } catch (error) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Fixierung konnte nicht geändert werden: $error'),
         ),
       );
     }
@@ -190,38 +247,35 @@ class UserPostsSection extends StatelessWidget {
   }) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => FeedCommentsScreen(
-          postId: postId,
-          postText: text,
-          authorName: authorName,
-          authorPhotoUrl: authorPhotoUrl,
-          createdAt: createdAt,
-          authorUserId: authorUserId,
-        ),
+        builder:
+            (_) => FeedCommentsScreen(
+              postId: postId,
+              postText: text,
+              authorName: authorName,
+              authorPhotoUrl: authorPhotoUrl,
+              createdAt: createdAt,
+              authorUserId: authorUserId,
+            ),
       ),
     );
   }
 
-  void _openTagFilter(
-    BuildContext context,
-    String tag,
-  ) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => TagFilterScreen(tag: tag),
-      ),
-    );
+  void _openTagFilter(BuildContext context, String tag) {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => TagFilterScreen(tag: tag)));
   }
 
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
 
-    final postsStream = FirebaseFirestore.instance
-        .collection('posts')
-        .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .snapshots();
+    final postsStream =
+        FirebaseFirestore.instance
+            .collection('posts')
+            .where('userId', isEqualTo: userId)
+            .orderBy('createdAt', descending: true)
+            .snapshots();
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: postsStream,
@@ -230,10 +284,7 @@ class UserPostsSection extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
               const Text(
                 'Beiträge konnten nicht geladen werden.',
@@ -247,10 +298,7 @@ class UserPostsSection extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
@@ -261,24 +309,49 @@ class UserPostsSection extends StatelessWidget {
           );
         }
 
-        final posts = snapshot.data?.docs ?? [];
+        final posts = snapshot.data?.docs.toList() ?? [];
+
+        posts.sort((a, b) {
+          final aData = a.data();
+          final bData = b.data();
+
+          final aPinnedAtRaw = aData['pinnedAt'];
+          final bPinnedAtRaw = bData['pinnedAt'];
+
+          final aPinnedAt = aPinnedAtRaw is Timestamp ? aPinnedAtRaw : null;
+
+          final bPinnedAt = bPinnedAtRaw is Timestamp ? bPinnedAtRaw : null;
+
+          final aIsPinned = aPinnedAt != null;
+          final bIsPinned = bPinnedAt != null;
+
+          // Fixierte Beiträge immer zuerst.
+          if (aIsPinned != bIsPinned) {
+            return aIsPinned ? -1 : 1;
+          }
+
+          // Wenn beide fixiert sind:
+          // zuletzt fixierter Beitrag zuerst.
+          if (aPinnedAt != null && bPinnedAt != null) {
+            return bPinnedAt.compareTo(aPinnedAt);
+          }
+
+          // Nicht fixierte Beiträge bleiben in ihrer
+          // normalen chronologischen Reihenfolge.
+          return 0;
+        });
 
         if (posts.isEmpty) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text(title, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 12),
               const Row(
                 children: [
                   Icon(Icons.article_outlined),
                   SizedBox(width: 8),
-                  Expanded(
-                    child: Text('Noch keine Beiträge vorhanden.'),
-                  ),
+                  Expanded(child: Text('Noch keine Beiträge vorhanden.')),
                 ],
               ),
             ],
@@ -288,10 +361,7 @@ class UserPostsSection extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleLarge),
 
             const SizedBox(height: 12),
 
@@ -303,6 +373,12 @@ class UserPostsSection extends StatelessWidget {
                 final post = posts[index];
                 final data = post.data();
 
+                final pinnedAtRaw = data['pinnedAt'];
+
+                final pinnedAt = pinnedAtRaw is Timestamp ? pinnedAtRaw : null;
+
+                final isPinned = pinnedAt != null;
+
                 final text = (data['text'] ?? '').toString();
 
                 final createdAtRaw = data['createdAt'];
@@ -310,76 +386,57 @@ class UserPostsSection extends StatelessWidget {
                     createdAtRaw is Timestamp ? createdAtRaw : null;
 
                 final editedAtRaw = data['editedAt'];
-                final editedAt =
-                    editedAtRaw is Timestamp ? editedAtRaw : null;
+                final editedAt = editedAtRaw is Timestamp ? editedAtRaw : null;
 
-                final authorName = (
-                  data['authorName'] ??
-                  data['displayName'] ??
-                  data['userName'] ??
-                  'Unbekannt'
-                ).toString();
+                final authorName =
+                    (data['authorName'] ??
+                            data['displayName'] ??
+                            data['userName'] ??
+                            'Unbekannt')
+                        .toString();
 
-                final authorPhotoUrl = (
-                  data['authorPhotoUrl'] ??
-                  data['photoUrl'] ??
-                  ''
-                ).toString();
+                final authorPhotoUrl =
+                    (data['authorPhotoUrl'] ?? data['photoUrl'] ?? '')
+                        .toString();
 
-                final authorUserId = (
-                  data['authorUserId'] ??
-                  data['userId'] ??
-                  userId
-                ).toString();
+                final authorUserId =
+                    (data['authorUserId'] ?? data['userId'] ?? userId)
+                        .toString();
 
                 final gifData = _readGifData(data);
                 final gifUrl = gifData['url'] ?? '';
                 final gifTitle = gifData['title'] ?? '';
 
-                final imageUrl = (
-                  data ['imageUrl'] ?? ''
-                ).toString();
+                final imageUrl = (data['imageUrl'] ?? '').toString();
 
                 final tags = _readTags(data['tags']);
 
-                final storedLikeCount = _readCount(
-                  data['likeCount'],
-                );
+                final storedLikeCount = _readCount(data['likeCount']);
 
-                final storedCommentCount = _readCount(
-                  data['commentCount'],
-                );
+                final storedCommentCount = _readCount(data['commentCount']);
 
-                return StreamBuilder<
-                    QuerySnapshot<Map<String, dynamic>>>(
-                  stream: _subcollectionStream(
-                    post.id,
-                    'likes',
-                  ),
+                return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: _subcollectionStream(post.id, 'likes'),
                   builder: (context, likesSnapshot) {
-                    final likeDocuments =
-                        likesSnapshot.data?.docs ?? [];
+                    final likeDocuments = likesSnapshot.data?.docs ?? [];
 
-                    final likeCount = likesSnapshot.hasData
-                        ? likeDocuments.length
-                        : storedLikeCount;
+                    final likeCount =
+                        likesSnapshot.hasData
+                            ? likeDocuments.length
+                            : storedLikeCount;
 
                     final hasLiked = _hasCurrentUserLiked(
                       likeDocuments,
                       currentUser?.uid,
                     );
 
-                    return StreamBuilder<
-                        QuerySnapshot<Map<String, dynamic>>>(
-                      stream: _subcollectionStream(
-                        post.id,
-                        'comments',
-                      ),
+                    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: _subcollectionStream(post.id, 'comments'),
                       builder: (context, commentsSnapshot) {
                         final commentCount =
                             commentsSnapshot.hasData
-                            ? commentsSnapshot.data!.docs.length
-                            : storedCommentCount;
+                                ? commentsSnapshot.data!.docs.length
+                                : storedCommentCount;
 
                         return PostCard(
                           postId: post.id,
@@ -387,9 +444,7 @@ class UserPostsSection extends StatelessWidget {
                           userId: authorUserId,
                           authorName: authorName,
                           photoUrl: authorPhotoUrl,
-                          formattedDate: _formatTimestamp(
-                            createdAt,
-                          ),
+                          formattedDate: _formatTimestamp(createdAt),
                           likeCount: likeCount,
                           commentCount: commentCount,
                           hasLiked: hasLiked,
@@ -399,11 +454,19 @@ class UserPostsSection extends StatelessWidget {
                           imageUrl: imageUrl,
                           tags: tags,
                           onToggleLike: () {
-                            _toggleLike(
-                              context,
-                              post.id,
-                            );
+                            _toggleLike(context, post.id);
                           },
+                          isPinned: isPinned,
+                          onTogglePin:
+                              currentUser?.uid == authorUserId
+                                  ? () {
+                                    _togglePin(
+                                      context: context,
+                                      postId: post.id,
+                                      isPinned: isPinned,
+                                    );
+                                  }
+                                  : null,
                           onOpenComments: () {
                             _openComments(
                               context: context,
@@ -416,10 +479,7 @@ class UserPostsSection extends StatelessWidget {
                             );
                           },
                           onTagTap: (tag) {
-                            _openTagFilter(
-                              context,
-                              tag,
-                            );
+                            _openTagFilter(context, tag);
                           },
                         );
                       },
