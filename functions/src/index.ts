@@ -57,6 +57,26 @@ async function deleteFollowRelationships(uid: string): Promise<void> {
   await bulkWriter.close();
 }
 
+async function deleteUserInteractions(
+  collectionName: "likes" | "comments",
+  uid: string,
+): Promise<number> {
+  const snapshot = await db
+    .collectionGroup(collectionName)
+    .where("userId", "==", uid)
+    .get();
+
+  const bulkWriter = db.bulkWriter();
+
+  for (const document of snapshot.docs) {
+    bulkWriter.delete(document.ref);
+  }
+
+  await bulkWriter.close();
+
+  return snapshot.size;
+}
+
 export const deleteAccount = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError(
@@ -128,8 +148,10 @@ export const deleteAccount = onCall(async (request) => {
     };
   });
 
-  // Erst nach erfolgreicher Transaction Follow-Beziehungen bereinigen.
+  // Erst nach erfolgreicher Transaction Follow-Beziehungen, likes und Kommentare bereinigen.
   await deleteFollowRelationships(uid);
+  await deleteUserInteractions("likes", uid);
+await deleteUserInteractions("comments", uid);
 
   return {
     allowed: true,

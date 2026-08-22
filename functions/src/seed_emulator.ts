@@ -19,6 +19,14 @@ if (!process.env.FIREBASE_AUTH_EMULATOR_HOST) {
   );
 }
 
+const testPassword = process.env.SEED_TEST_PASSWORD;
+
+if (!testPassword) {
+  throw new Error(
+    "Abbruch: SEED_TEST_PASSWORD ist nicht gesetzt.",
+  );
+}
+
 initializeApp({projectId});
 
 const db = getFirestore();
@@ -32,19 +40,19 @@ const testUsers = [
   {
     uid: normalUid,
     email: "normal@test.de",
-    password: "Test123!",
+    password: testPassword,
     displayName: "Normal User",
   },
   {
     uid: admin1Uid,
     email: "admin1@test.de",
-    password: "Test123!",
+    password: testPassword,
     displayName: "Admin 1",
   },
   {
     uid: admin2Uid,
     email: "admin2@test.de",
-    password: "Test123!",
+    password: testPassword,
     displayName: "Admin 2",
   },
 ];
@@ -152,7 +160,7 @@ async function seedFirestore(): Promise<void> {
       createdAt: FieldValue.serverTimestamp(),
     });
 
-  // Admin 1 folgt dem Normal User.
+  // Admin 1 folgt Normal User.
   await db
     .collection("users")
     .doc(admin1Uid)
@@ -170,6 +178,43 @@ async function seedFirestore(): Promise<void> {
     .set({
       createdAt: FieldValue.serverTimestamp(),
     });
+
+  // Testpost von Admin 1.
+  const testPostId = "test-post-admin-1";
+  const postRef = db.collection("posts").doc(testPostId);
+
+  await postRef.set({
+    userId: admin1Uid,
+    userName: "Admin 1",
+    text: "Testpost für die Accountlöschung",
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // Like vom Normal User – muss verschwinden.
+  await postRef.collection("likes").doc(normalUid).set({
+    userId: normalUid,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // Like von Admin 2 – muss bestehen bleiben.
+  await postRef.collection("likes").doc(admin2Uid).set({
+    userId: admin2Uid,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // Kommentar vom Normal User – muss verschwinden.
+  await postRef.collection("comments").doc("comment-normal-user").set({
+    userId: normalUid,
+    text: "Kommentar vom Normal User",
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // Kommentar von Admin 2 – muss bestehen bleiben.
+  await postRef.collection("comments").doc("comment-admin-2").set({
+    userId: admin2Uid,
+    text: "Kommentar von Admin 2",
+    createdAt: FieldValue.serverTimestamp(),
+  });
 }
 
 async function main(): Promise<void> {
