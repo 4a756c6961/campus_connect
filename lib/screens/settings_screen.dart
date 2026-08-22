@@ -56,11 +56,11 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
-Future<void> _testAccountDeletionCheck(BuildContext context) async {
+Future<void> _testAccountDeletionRequest(BuildContext context) async {
   final service = AccountDeletionService();
 
   try {
-    final result = await service.checkDeletionAllowed();
+    final result = await service.requestAccountDeletion();
 
     if (!context.mounted) return;
 
@@ -178,7 +178,7 @@ Future<void> _testAccountDeletionCheck(BuildContext context) async {
               'Prüft nur die Berechtigung im Firebase Emulator.',
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => _testAccountDeletionCheck(context),
+            onTap: () => _testAccountDeletionRequest(context),
           ),
         ),
       ],

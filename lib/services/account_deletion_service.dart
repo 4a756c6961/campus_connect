@@ -7,7 +7,7 @@ class AccountDeletionService {
     FirebaseFunctions? functions,
   }) : _functions = functions ?? FirebaseFunctions.instance;
 
-  Future<AccountDeletionCheckResult> checkDeletionAllowed() async {
+  Future<AccountDeletionCheckResult> requestAccountDeletion() async {
     try {
       final callable = _functions.httpsCallable('deleteAccount');
 

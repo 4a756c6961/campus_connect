@@ -1,13 +1,61 @@
 import {setGlobalOptions} from "firebase-functions";
 import {HttpsError, onCall} from "firebase-functions/https";
 import {initializeApp} from "firebase-admin/app";
-import {getFirestore} from "firebase-admin/firestore";
+import {
+  FieldValue,
+  getFirestore,
+} from "firebase-admin/firestore";
 
 initializeApp();
 
-setGlobalOptions({ maxInstances: 10 });
+setGlobalOptions({maxInstances: 10});
 
 const db = getFirestore();
+
+async function deleteFollowRelationships(uid: string): Promise<void> {
+  const userRef = db.collection("users").doc(uid);
+
+  const [followingSnapshot, followersSnapshot] = await Promise.all([
+    userRef.collection("following").get(),
+    userRef.collection("followers").get(),
+  ]);
+
+  const bulkWriter = db.bulkWriter();
+
+  for (const document of followingSnapshot.docs) {
+    const followedUserId = document.id;
+
+    // Gegenreferenz beim gefolgten Nutzer entfernen.
+    bulkWriter.delete(
+      db
+        .collection("users")
+        .doc(followedUserId)
+        .collection("followers")
+        .doc(uid),
+    );
+
+    // Eigenen Following-Eintrag entfernen.
+    bulkWriter.delete(document.ref);
+  }
+
+  for (const document of followersSnapshot.docs) {
+    const followerUserId = document.id;
+
+    // Gegenreferenz beim Follower entfernen.
+    bulkWriter.delete(
+      db
+        .collection("users")
+        .doc(followerUserId)
+        .collection("following")
+        .doc(uid),
+    );
+
+    // Eigenen Follower-Eintrag entfernen.
+    bulkWriter.delete(document.ref);
+  }
+
+  await bulkWriter.close();
+}
 
 export const deleteAccount = onCall(async (request) => {
   if (!request.auth) {
@@ -19,26 +67,76 @@ export const deleteAccount = onCall(async (request) => {
 
   const uid = request.auth.uid;
 
-  const adminDoc = await db.collection("admin").doc(uid).get();
+  const result = await db.runTransaction(async (transaction) => {
+    const userRef = db.collection("users").doc(uid);
+    const adminRef = db.collection("admin").doc(uid);
 
-  const isActiveAdmin =
-    adminDoc.exists && adminDoc.data()?.active === true;
+    const userDoc = await transaction.get(userRef);
+    const adminDoc = await transaction.get(adminRef);
 
-  if (isActiveAdmin) {
-    const activeAdmins = await db
-      .collection("admin")
-      .where("active", "==", true)
-      .get();
+    const alreadyDeleting =
+      userDoc.exists &&
+      userDoc.data()?.accountStatus === "deleting";
 
-    if (activeAdmins.size <= 1) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Der letzte aktive Administrator kann seinen Account nicht löschen.",
+    const isActiveAdmin =
+      adminDoc.exists &&
+      adminDoc.data()?.active === true;
+
+    // Nur beim ersten Start des Löschprozesses prüfen und Status setzen.
+    if (!alreadyDeleting) {
+      if (isActiveAdmin) {
+        const activeAdminsQuery = db
+          .collection("admin")
+          .where("active", "==", true);
+
+        const activeAdmins = await transaction.get(
+          activeAdminsQuery,
+        );
+
+        if (activeAdmins.size <= 1) {
+          throw new HttpsError(
+            "failed-precondition",
+            "Der letzte aktive Administrator kann seinen Account nicht löschen.",
+          );
+        }
+      }
+
+      transaction.set(
+        userRef,
+        {
+          accountStatus: "deleting",
+          deletionRequestedAt: FieldValue.serverTimestamp(),
+        },
+        {merge: true},
       );
+
+      if (isActiveAdmin) {
+        transaction.set(
+          adminRef,
+          {
+            active: false,
+            deletionPending: true,
+            deletionRequestedAt: FieldValue.serverTimestamp(),
+          },
+          {merge: true},
+        );
+      }
     }
- }
- return {
+
+    return {
+      started: !alreadyDeleting,
+    };
+  });
+
+  // Erst nach erfolgreicher Transaction Follow-Beziehungen bereinigen.
+  await deleteFollowRelationships(uid);
+
+  return {
     allowed: true,
-    message: "Accountlöschung darf gestartet werden.",
+    started: result.started,
+    status: "deleting",
+    message: result.started
+      ? "Die Accountlöschung wurde gestartet."
+      : "Die Accountlöschung wird fortgesetzt.",
   };
 });
