@@ -67,13 +67,20 @@ Future<void> _firebaseMessagingBackgroundHandler(
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-    await configureFirebaseEmulators();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await configureFirebaseEmulators();
+
+  if (!useFirebaseEmulators) {
     final pushNotificationService = PushNotificationService();
+    pushNotificationService.initialize();
+  }
 
-  pushNotificationService.initialize();
   _configureGiphy();
+
   runApp(const MyApp());
 }
 
