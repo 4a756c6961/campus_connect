@@ -151,7 +151,9 @@ export const deleteAccount = onCall(async (request) => {
   // Erst nach erfolgreicher Transaction Follow-Beziehungen, likes und Kommentare bereinigen.
   await deleteFollowRelationships(uid);
   await deleteUserInteractions("likes", uid);
-await deleteUserInteractions("comments", uid);
+  await deleteUserInteractions("comments", uid);
+  await deleteFollowRelationships(uid);
+  await deleteUserNotifications(uid); 
 
   return {
     allowed: true,
@@ -162,3 +164,28 @@ await deleteUserInteractions("comments", uid);
       : "Die Accountlöschung wird fortgesetzt.",
   };
 });
+async function deleteUserNotifications(uid: string): Promise<void> {
+  const ownNotificationsRef = db
+    .collection("users")
+    .doc(uid)
+    .collection("notifications");
+
+  const ownNotificationsSnapshot = await ownNotificationsRef.get();
+
+  const sentNotificationsSnapshot = await db
+    .collectionGroup("notifications")
+    .where("senderId", "==", uid)
+    .get();
+
+  const bulkWriter = db.bulkWriter();
+
+  for (const document of ownNotificationsSnapshot.docs) {
+    bulkWriter.delete(document.ref);
+  }
+
+  for (const document of sentNotificationsSnapshot.docs) {
+    bulkWriter.delete(document.ref);
+  }
+
+  await bulkWriter.close();
+}

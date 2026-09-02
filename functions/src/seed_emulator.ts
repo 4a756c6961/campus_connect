@@ -215,6 +215,64 @@ async function seedFirestore(): Promise<void> {
     text: "Kommentar von Admin 2",
     createdAt: FieldValue.serverTimestamp(),
   });
+  // ---------------------------------------------------------
+  // Notifications für Account-Deletion-Test
+  // ---------------------------------------------------------
+
+  // Notification von Normal User an Admin 1.
+  // MUSS bei Löschung des Normal Users verschwinden.
+  await db
+    .collection("users")
+    .doc(admin1Uid)
+    .collection("notifications")
+    .doc("notification-from-normal")
+    .set({
+      type: "like",
+      senderId: normalUid,
+      senderName: "Normal User",
+      senderPhotoUrl: null,
+      postId: testPostId,
+      message: "Normal User gefällt dein Beitrag.",
+      isRead: false,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+  // Notification von Admin 2 an Admin 1.
+  // MUSS bestehen bleiben.
+  await db
+    .collection("users")
+    .doc(admin1Uid)
+    .collection("notifications")
+    .doc("notification-from-admin-2")
+    .set({
+      type: "like",
+      senderId: admin2Uid,
+      senderName: "Admin 2",
+      senderPhotoUrl: null,
+      postId: testPostId,
+      message: "Admin 2 gefällt dein Beitrag.",
+      isRead: false,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+  // Eigene Notification des Normal Users.
+  // Die komplette Notification-Subcollection des
+  // zu löschenden Nutzers MUSS verschwinden.
+  await db
+    .collection("users")
+    .doc(normalUid)
+    .collection("notifications")
+    .doc("notification-for-normal")
+    .set({
+      type: "follow",
+      senderId: admin1Uid,
+      senderName: "Admin 1",
+      senderPhotoUrl: null,
+      postId: null,
+      message: "Admin 1 folgt dir jetzt.",
+      isRead: false,
+      createdAt: FieldValue.serverTimestamp(),
+    });
 }
 
 async function main(): Promise<void> {
