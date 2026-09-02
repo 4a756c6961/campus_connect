@@ -148,13 +148,43 @@ export const deleteAccount = onCall(async (request) => {
     };
   });
 
+  async function deleteUserPosts(uid: string): Promise<number> {
+  const postsSnapshot = await db
+    .collection("posts")
+    .where("userId", "==", uid)
+    .get();
+
+  const bulkWriter = db.bulkWriter();
+
+  for (const postDocument of postsSnapshot.docs) {
+    const [likesSnapshot, commentsSnapshot] = await Promise.all([
+      postDocument.ref.collection("likes").get(),
+      postDocument.ref.collection("comments").get(),
+    ]);
+
+    for (const likeDocument of likesSnapshot.docs) {
+      bulkWriter.delete(likeDocument.ref);
+    }
+
+    for (const commentDocument of commentsSnapshot.docs) {
+      bulkWriter.delete(commentDocument.ref);
+    }
+
+    bulkWriter.delete(postDocument.ref);
+  }
+
+  await bulkWriter.close();
+
+  return postsSnapshot.size;
+}
+
   // Erst nach erfolgreicher Transaction Follow-Beziehungen, likes und Kommentare bereinigen.
   await deleteFollowRelationships(uid);
   await deleteUserInteractions("likes", uid);
   await deleteUserInteractions("comments", uid);
   await deleteFollowRelationships(uid);
   await deleteUserNotifications(uid); 
-
+  await deleteUserPosts(uid);
   return {
     allowed: true,
     started: result.started,
