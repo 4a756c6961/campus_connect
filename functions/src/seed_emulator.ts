@@ -273,8 +273,63 @@ async function seedFirestore(): Promise<void> {
       isRead: false,
       createdAt: FieldValue.serverTimestamp(),
     });
-}
 
+      // Eigene Notification des Normal Users.
+  // Die komplette Notification-Subcollection des
+  // zu löschenden Nutzers MUSS verschwinden.
+  await db
+    .collection("users")
+    .doc(normalUid)
+    .collection("notifications")
+    .doc("notification-for-normal")
+    .set({
+      type: "follow",
+      senderId: admin1Uid,
+      senderName: "Admin 1",
+      senderPhotoUrl: null,
+      postId: null,
+      message: "Admin 1 folgt dir jetzt.",
+      isRead: false,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+  // Testpost vom Normal User.
+  // Dieser komplette Post MUSS bei der Accountlöschung verschwinden.
+  const normalUserPostId = "test-post-normal-user";
+  const normalUserPostRef = db.collection("posts").doc(normalUserPostId);
+
+  await normalUserPostRef.set({
+    userId: normalUid,
+    userName: "Normal User",
+    text: "Dieser Post gehört dem zu löschenden Nutzer.",
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // Like von Admin 1 auf dem Post des Normal Users.
+  // Muss zusammen mit dem Post verschwinden.
+  await normalUserPostRef.collection("likes").doc(admin1Uid).set({
+    userId: admin1Uid,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // Like von Admin 2 auf dem Post des Normal Users.
+  // Muss zusammen mit dem Post verschwinden.
+  await normalUserPostRef.collection("likes").doc(admin2Uid).set({
+    userId: admin2Uid,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // Kommentar von Admin 1 auf dem Post des Normal Users.
+  // Muss zusammen mit dem Post verschwinden.
+  await normalUserPostRef
+    .collection("comments")
+    .doc("comment-admin-1-on-normal-post")
+    .set({
+      userId: admin1Uid,
+      text: "Kommentar auf dem Post vom Normal User",
+      createdAt: FieldValue.serverTimestamp(),
+    });
+}
 async function main(): Promise<void> {
   await resetAuthUsers();
   await seedFirestore();

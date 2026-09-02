@@ -178,6 +178,7 @@ export const deleteAccount = onCall(async (request) => {
   return postsSnapshot.size;
 }
 
+
   // Erst nach erfolgreicher Transaction Follow-Beziehungen, likes und Kommentare bereinigen.
   await deleteFollowRelationships(uid);
   await deleteUserInteractions("likes", uid);
