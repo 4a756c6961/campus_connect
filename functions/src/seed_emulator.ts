@@ -329,6 +329,43 @@ async function seedFirestore(): Promise<void> {
       text: "Kommentar auf dem Post vom Normal User",
       createdAt: FieldValue.serverTimestamp(),
     });
+
+      // ---------------------------------------------------------
+  // Reports für Account-Deletion-Test
+  // ---------------------------------------------------------
+
+  // Report vom Normal User über Admin 1.
+  // MUSS bei Löschung des Normal Users verschwinden.
+  await db.collection("reports").doc("report-normal-about-admin-post").set({
+    postId: testPostId,
+    reporterUserId: normalUid,
+    reportedUserId: admin1Uid,
+    reason: "other",
+    status: "open",
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // Report von Admin 2 über den Normal User.
+  // MUSS bei Löschung des Normal Users verschwinden.
+  await db.collection("reports").doc("report-admin-2-about-normal-post").set({
+    postId: normalUserPostId,
+    reporterUserId: admin2Uid,
+    reportedUserId: normalUid,
+    reason: "other",
+    status: "open",
+    createdAt: FieldValue.serverTimestamp(),
+  });
+
+  // Report von Admin 2 über Admin 1.
+  // MUSS bestehen bleiben.
+  await db.collection("reports").doc("report-admin-2-about-admin-1").set({
+    postId: testPostId,
+    reporterUserId: admin2Uid,
+    reportedUserId: admin1Uid,
+    reason: "spam",
+    status: "open",
+    createdAt: FieldValue.serverTimestamp(),
+  });
 }
 async function main(): Promise<void> {
   await resetAuthUsers();

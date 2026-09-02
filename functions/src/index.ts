@@ -177,7 +177,38 @@ export const deleteAccount = onCall(async (request) => {
 
   return postsSnapshot.size;
 }
+async function deleteUserReports(uid: string): Promise<number> {
+  const [createdReportsSnapshot, receivedReportsSnapshot] = await Promise.all([
+    db
+      .collection("reports")
+      .where("reporterUserId", "==", uid)
+      .get(),
+    db
+      .collection("reports")
+      .where("reportedUserId", "==", uid)
+      .get(),
+  ]);
 
+  const reportRefs = new Map<string, FirebaseFirestore.DocumentReference>();
+
+  for (const document of createdReportsSnapshot.docs) {
+    reportRefs.set(document.ref.path, document.ref);
+  }
+
+  for (const document of receivedReportsSnapshot.docs) {
+    reportRefs.set(document.ref.path, document.ref);
+  }
+
+  const bulkWriter = db.bulkWriter();
+
+  for (const reportRef of reportRefs.values()) {
+    bulkWriter.delete(reportRef);
+  }
+
+  await bulkWriter.close();
+
+  return reportRefs.size;
+}
 
   // Erst nach erfolgreicher Transaction Follow-Beziehungen, likes und Kommentare bereinigen.
   await deleteFollowRelationships(uid);
@@ -186,6 +217,7 @@ export const deleteAccount = onCall(async (request) => {
   await deleteFollowRelationships(uid);
   await deleteUserNotifications(uid); 
   await deleteUserPosts(uid);
+  await deleteUserReports(uid);
   return {
     allowed: true,
     started: result.started,
