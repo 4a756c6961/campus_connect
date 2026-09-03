@@ -210,6 +210,36 @@ async function deleteUserReports(uid: string): Promise<number> {
   return reportRefs.size;
 }
 
+async function deleteDirectUserSubcollections(uid: string): Promise<number> {
+  const userRef = db.collection("users").doc(uid);
+
+  const subcollectionNames = [
+    "hiddenPosts",
+    "fcmTokens",
+  ] as const;
+
+  const snapshots = await Promise.all(
+    subcollectionNames.map((collectionName) =>
+      userRef.collection(collectionName).get(),
+    ),
+  );
+
+  const bulkWriter = db.bulkWriter();
+
+  let deletedDocuments = 0;
+
+  for (const snapshot of snapshots) {
+    for (const document of snapshot.docs) {
+      bulkWriter.delete(document.ref);
+      deletedDocuments++;
+    }
+  }
+
+  await bulkWriter.close();
+
+  return deletedDocuments;
+}
+
   // Erst nach erfolgreicher Transaction Follow-Beziehungen, likes und Kommentare bereinigen.
   await deleteFollowRelationships(uid);
   await deleteUserInteractions("likes", uid);
@@ -218,6 +248,7 @@ async function deleteUserReports(uid: string): Promise<number> {
   await deleteUserNotifications(uid); 
   await deleteUserPosts(uid);
   await deleteUserReports(uid);
+  await deleteDirectUserSubcollections(uid);
   return {
     allowed: true,
     started: result.started,

@@ -366,6 +366,35 @@ async function seedFirestore(): Promise<void> {
     status: "open",
     createdAt: FieldValue.serverTimestamp(),
   });
+
+    // ---------------------------------------------------------
+  // Direkte User-Subcollections für Account-Deletion-Test
+  // ---------------------------------------------------------
+
+  // Verborgener Post des Normal Users.
+  // MUSS bei Löschung des Normal Users verschwinden.
+  await db
+    .collection("users")
+    .doc(normalUid)
+    .collection("hiddenPosts")
+    .doc(testPostId)
+    .set({
+      postId: testPostId,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+  // FCM-Token des Normal Users.
+  // MUSS bei Löschung des Normal Users verschwinden.
+  await db
+    .collection("users")
+    .doc(normalUid)
+    .collection("fcmTokens")
+    .doc("test-token-1")
+    .set({
+      token: "local-emulator-token",
+      platform: "test",
+      createdAt: FieldValue.serverTimestamp(),
+    });
 }
 async function main(): Promise<void> {
   await resetAuthUsers();
