@@ -71,6 +71,8 @@ Future<void> _testAccountDeletionRequest(BuildContext context) async {
         ),
       ),
     );
+
+    await FirebaseAuth.instance.signOut();
   } on AccountDeletionException catch (error) {
     if (!context.mounted) return;
 
@@ -78,6 +80,16 @@ Future<void> _testAccountDeletionRequest(BuildContext context) async {
       SnackBar(
         content: Text(
           '${error.code}: ${error.message}',
+        ),
+      ),
+    );
+  } on FirebaseAuthException catch (error) {
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          error.message ?? 'Die lokale Abmeldung ist fehlgeschlagen.',
         ),
       ),
     );
