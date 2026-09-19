@@ -11,13 +11,14 @@ import {
 initializeApp();
 
 setGlobalOptions({maxInstances: 10});
-
+// Konstanten
 const db = getFirestore();
 const auth = getAuth();
 const bucket = getStorage().bucket(
   "campusconnect-3f38d.firebasestorage.app",
 );
 
+// Helper
 async function deleteFollowRelationships(uid: string): Promise<void> {
   const userRef = db.collection("users").doc(uid);
 
@@ -82,6 +83,32 @@ async function deleteUserInteractions(
 
   return snapshot.size;
 }
+
+async function deleteUserNotifications(uid: string): Promise<void> {
+  const ownNotificationsRef = db
+    .collection("users")
+    .doc(uid)
+    .collection("notifications");
+
+  const ownNotificationsSnapshot = await ownNotificationsRef.get();
+
+  const sentNotificationsSnapshot = await db
+    .collectionGroup("notifications")
+    .where("senderId", "==", uid)
+    .get();
+
+  const bulkWriter = db.bulkWriter();
+
+  for (const document of ownNotificationsSnapshot.docs) {
+    bulkWriter.delete(document.ref);
+  }
+
+  for (const document of sentNotificationsSnapshot.docs) {
+    bulkWriter.delete(document.ref);
+  }
+
+  await bulkWriter.close();
+}
 async function deleteUserStorageFiles(uid: string): Promise<void> {
   const prefixes = [
     `profile_images/${uid}/`,
@@ -96,6 +123,123 @@ async function deleteUserStorageFiles(uid: string): Promise<void> {
     });
   }
 }
+async function deleteUserDocuments(uid: string): Promise<void> {
+  const bulkWriter = db.bulkWriter();
+
+  bulkWriter.delete(db.collection("users").doc(uid));
+  bulkWriter.delete(db.collection("admin").doc(uid));
+
+  await bulkWriter.close();
+}
+
+async function deleteUserReports(uid: string): Promise<number> {
+  const [createdReportsSnapshot, receivedReportsSnapshot] = await Promise.all([
+    db
+      .collection("reports")
+      .where("reporterUserId", "==", uid)
+      .get(),
+    db
+      .collection("reports")
+      .where("reportedUserId", "==", uid)
+      .get(),
+  ]);
+
+  const reportRefs = new Map<string, FirebaseFirestore.DocumentReference>();
+
+  for (const document of createdReportsSnapshot.docs) {
+    reportRefs.set(document.ref.path, document.ref);
+  }
+
+  for (const document of receivedReportsSnapshot.docs) {
+    reportRefs.set(document.ref.path, document.ref);
+  }
+
+  const bulkWriter = db.bulkWriter();
+
+  for (const reportRef of reportRefs.values()) {
+    bulkWriter.delete(reportRef);
+  }
+
+  await bulkWriter.close();
+
+  return reportRefs.size;
+}
+
+async function deleteDirectUserSubcollections(uid: string): Promise<number> {
+  const userRef = db.collection("users").doc(uid);
+
+  const subcollectionNames = [
+    "hiddenPosts",
+    "fcmTokens",
+  ] as const;
+
+  const snapshots = await Promise.all(
+    subcollectionNames.map((collectionName) =>
+      userRef.collection(collectionName).get(),
+    ),
+  );
+
+  const bulkWriter = db.bulkWriter();
+
+  let deletedDocuments = 0;
+
+  for (const snapshot of snapshots) {
+    for (const document of snapshot.docs) {
+      bulkWriter.delete(document.ref);
+      deletedDocuments++;
+    }
+  }
+
+  await bulkWriter.close();
+
+  return deletedDocuments;
+}
+
+
+async function deleteAuthUser(uid: string): Promise<void> {
+  try {
+    await auth.deleteUser(uid);
+  } catch (error: unknown) {
+    const code = (error as { code?: string }).code;
+
+    if (code !== "auth/user-not-found") {
+      throw error;
+    }
+  }
+}
+
+async function deleteUserPosts(uid: string): Promise<number> {
+  const postsSnapshot = await db
+    .collection("posts")
+    .where("userId", "==", uid)
+    .get();
+
+  const bulkWriter = db.bulkWriter();
+
+  for (const postDocument of postsSnapshot.docs) {
+    const [likesSnapshot, commentsSnapshot] = await Promise.all([
+      postDocument.ref.collection("likes").get(),
+      postDocument.ref.collection("comments").get(),
+    ]);
+
+    for (const likeDocument of likesSnapshot.docs) {
+      bulkWriter.delete(likeDocument.ref);
+    }
+
+    for (const commentDocument of commentsSnapshot.docs) {
+      bulkWriter.delete(commentDocument.ref);
+    }
+
+    bulkWriter.delete(postDocument.ref);
+  }
+
+  await bulkWriter.close();
+
+  return postsSnapshot.size;
+}
+
+// Cloud Funktion
+
 export const deleteAccount = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError(
@@ -167,161 +311,21 @@ export const deleteAccount = onCall(async (request) => {
     };
   });
 
-  async function deleteUserPosts(uid: string): Promise<number> {
-  const postsSnapshot = await db
-    .collection("posts")
-    .where("userId", "==", uid)
-    .get();
-
-  const bulkWriter = db.bulkWriter();
-
-  for (const postDocument of postsSnapshot.docs) {
-    const [likesSnapshot, commentsSnapshot] = await Promise.all([
-      postDocument.ref.collection("likes").get(),
-      postDocument.ref.collection("comments").get(),
-    ]);
-
-    for (const likeDocument of likesSnapshot.docs) {
-      bulkWriter.delete(likeDocument.ref);
-    }
-
-    for (const commentDocument of commentsSnapshot.docs) {
-      bulkWriter.delete(commentDocument.ref);
-    }
-
-    bulkWriter.delete(postDocument.ref);
-  }
-
-  await bulkWriter.close();
-
-  return postsSnapshot.size;
-}
-async function deleteUserReports(uid: string): Promise<number> {
-  const [createdReportsSnapshot, receivedReportsSnapshot] = await Promise.all([
-    db
-      .collection("reports")
-      .where("reporterUserId", "==", uid)
-      .get(),
-    db
-      .collection("reports")
-      .where("reportedUserId", "==", uid)
-      .get(),
-  ]);
-
-  const reportRefs = new Map<string, FirebaseFirestore.DocumentReference>();
-
-  for (const document of createdReportsSnapshot.docs) {
-    reportRefs.set(document.ref.path, document.ref);
-  }
-
-  for (const document of receivedReportsSnapshot.docs) {
-    reportRefs.set(document.ref.path, document.ref);
-  }
-
-  const bulkWriter = db.bulkWriter();
-
-  for (const reportRef of reportRefs.values()) {
-    bulkWriter.delete(reportRef);
-  }
-
-  await bulkWriter.close();
-
-  return reportRefs.size;
-}
-
-async function deleteDirectUserSubcollections(uid: string): Promise<number> {
-  const userRef = db.collection("users").doc(uid);
-
-  const subcollectionNames = [
-    "hiddenPosts",
-    "fcmTokens",
-  ] as const;
-
-  const snapshots = await Promise.all(
-    subcollectionNames.map((collectionName) =>
-      userRef.collection(collectionName).get(),
-    ),
-  );
-
-  const bulkWriter = db.bulkWriter();
-
-  let deletedDocuments = 0;
-
-  for (const snapshot of snapshots) {
-    for (const document of snapshot.docs) {
-      bulkWriter.delete(document.ref);
-      deletedDocuments++;
-    }
-  }
-
-  await bulkWriter.close();
-
-  return deletedDocuments;
-}
-
-
-async function deleteAuthUser(uid: string): Promise<void> {
-  try {
-    await auth.deleteUser(uid);
-  } catch (error: unknown) {
-    const code = (error as {code?: string}).code;
-
-    if (code !== "auth/user-not-found") {
-      throw error;
-    }
-  }
-}
-
-async function deleteUserDocuments(uid: string): Promise<void> {
-  const bulkWriter = db.bulkWriter();
-
-  bulkWriter.delete(db.collection("users").doc(uid));
-  bulkWriter.delete(db.collection("admin").doc(uid));
-
-  await bulkWriter.close();
-}
-
   // Erst nach erfolgreicher Transaction Follow-Beziehungen, likes und Kommentare bereinigen.
-await deleteFollowRelationships(uid);
-await deleteUserInteractions("likes", uid);
-await deleteUserInteractions("comments", uid);
-await deleteUserNotifications(uid);
-await deleteUserReports(uid);
-await deleteUserPosts(uid);
-await deleteDirectUserSubcollections(uid);
-await deleteUserStorageFiles(uid);
-await deleteUserDocuments(uid);
-await deleteAuthUser(uid);
- return {
-  allowed: true,
-  started: result.started,
-  status: "deleted",
-  message: "Die Accountlöschung wurde abgeschlossen.",
-};
-
+  await deleteFollowRelationships(uid);
+  await deleteUserInteractions("likes", uid);
+  await deleteUserInteractions("comments", uid);
+  await deleteUserNotifications(uid);
+  await deleteUserReports(uid);
+  await deleteUserPosts(uid);
+  await deleteDirectUserSubcollections(uid);
+  await deleteUserStorageFiles(uid);
+  await deleteUserDocuments(uid);
+  await deleteAuthUser(uid);
+  return {
+    allowed: true,
+    started: result.started,
+    status: "deleted",
+    message: "Die Accountlöschung wurde abgeschlossen.",
+  };
 });
-async function deleteUserNotifications(uid: string): Promise<void> {
-  const ownNotificationsRef = db
-    .collection("users")
-    .doc(uid)
-    .collection("notifications");
-
-  const ownNotificationsSnapshot = await ownNotificationsRef.get();
-
-  const sentNotificationsSnapshot = await db
-    .collectionGroup("notifications")
-    .where("senderId", "==", uid)
-    .get();
-
-  const bulkWriter = db.bulkWriter();
-
-  for (const document of ownNotificationsSnapshot.docs) {
-    bulkWriter.delete(document.ref);
-  }
-
-  for (const document of sentNotificationsSnapshot.docs) {
-    bulkWriter.delete(document.ref);
-  }
-
-  await bulkWriter.close();
-}

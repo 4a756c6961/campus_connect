@@ -28,7 +28,7 @@ if (!testPassword) {
   );
 }
 
-initializeApp({projectId, storageBucket: "campusconnect-3f38d.firebasestorage.app",});
+initializeApp({projectId, storageBucket: "campusconnect-3f38d.firebasestorage.app"});
 
 const db = getFirestore();
 const auth = getAuth();
@@ -276,7 +276,7 @@ async function seedFirestore(): Promise<void> {
       createdAt: FieldValue.serverTimestamp(),
     });
 
-      // Eigene Notification des Normal Users.
+  // Eigene Notification des Normal Users.
   // Die komplette Notification-Subcollection des
   // zu löschenden Nutzers MUSS verschwinden.
   await db
@@ -332,7 +332,7 @@ async function seedFirestore(): Promise<void> {
       createdAt: FieldValue.serverTimestamp(),
     });
 
-      // ---------------------------------------------------------
+  // ---------------------------------------------------------
   // Reports für Account-Deletion-Test
   // ---------------------------------------------------------
 
@@ -369,7 +369,7 @@ async function seedFirestore(): Promise<void> {
     createdAt: FieldValue.serverTimestamp(),
   });
 
-    // ---------------------------------------------------------
+  // ---------------------------------------------------------
   // Direkte User-Subcollections für Account-Deletion-Test
   // ---------------------------------------------------------
 
@@ -398,7 +398,7 @@ async function seedFirestore(): Promise<void> {
       createdAt: FieldValue.serverTimestamp(),
     });
 
-      // ---------------------------------------------------------
+  // ---------------------------------------------------------
   // Storage-Dateien für Account-Deletion-Test
   // ---------------------------------------------------------
 
