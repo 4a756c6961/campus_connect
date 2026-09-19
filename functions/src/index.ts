@@ -5,12 +5,16 @@ import {
   FieldValue,
   getFirestore,
 } from "firebase-admin/firestore";
+import {getStorage} from "firebase-admin/storage";
 
 initializeApp();
 
 setGlobalOptions({maxInstances: 10});
 
 const db = getFirestore();
+const bucket = getStorage().bucket(
+  "campusconnect-3f38d.firebasestorage.app",
+);
 
 async function deleteFollowRelationships(uid: string): Promise<void> {
   const userRef = db.collection("users").doc(uid);
@@ -76,7 +80,20 @@ async function deleteUserInteractions(
 
   return snapshot.size;
 }
+async function deleteUserStorageFiles(uid: string): Promise<void> {
+  const prefixes = [
+    `profile_images/${uid}/`,
+    `profilePictures/${uid}/`,
+    `post_images/${uid}/`,
+  ];
 
+  for (const prefix of prefixes) {
+    await bucket.deleteFiles({
+      prefix,
+      force: true,
+    });
+  }
+}
 export const deleteAccount = onCall(async (request) => {
   if (!request.auth) {
     throw new HttpsError(
@@ -249,6 +266,7 @@ async function deleteDirectUserSubcollections(uid: string): Promise<number> {
   await deleteUserPosts(uid);
   await deleteUserReports(uid);
   await deleteDirectUserSubcollections(uid);
+  await deleteUserStorageFiles(uid);
   return {
     allowed: true,
     started: result.started,

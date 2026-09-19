@@ -1,5 +1,6 @@
 import {initializeApp} from "firebase-admin/app";
 import {getAuth} from "firebase-admin/auth";
+import {getStorage} from "firebase-admin/storage";
 import {
   FieldValue,
   getFirestore,
@@ -27,10 +28,11 @@ if (!testPassword) {
   );
 }
 
-initializeApp({projectId});
+initializeApp({projectId, storageBucket: "campusconnect-3f38d.firebasestorage.app",});
 
 const db = getFirestore();
 const auth = getAuth();
+const bucket = getStorage().bucket();
 
 const normalUid = "test-normal-user";
 const admin1Uid = "test-admin-1";
@@ -395,6 +397,38 @@ async function seedFirestore(): Promise<void> {
       platform: "test",
       createdAt: FieldValue.serverTimestamp(),
     });
+
+      // ---------------------------------------------------------
+  // Storage-Dateien für Account-Deletion-Test
+  // ---------------------------------------------------------
+
+  await bucket.file(`profile_images/${normalUid}/profile.jpg`).save(
+    Buffer.from("fake profile image"),
+    {
+      contentType: "image/jpeg",
+    },
+  );
+
+  await bucket.file(`profilePictures/${normalUid}/profile.jpg`).save(
+    Buffer.from("fake legacy profile image"),
+    {
+      contentType: "image/jpeg",
+    },
+  );
+
+  await bucket.file(`post_images/${normalUid}/test-post-image.jpg`).save(
+    Buffer.from("fake post image"),
+    {
+      contentType: "image/jpeg",
+    },
+  );
+
+  await bucket.file(`profile_images/${admin1Uid}/profile.jpg`).save(
+    Buffer.from("fake admin profile image"),
+    {
+      contentType: "image/jpeg",
+    },
+  );
 }
 async function main(): Promise<void> {
   await resetAuthUsers();
