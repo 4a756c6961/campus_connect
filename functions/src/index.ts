@@ -1,17 +1,19 @@
 import {setGlobalOptions} from "firebase-functions";
 import {HttpsError, onCall} from "firebase-functions/https";
 import {initializeApp} from "firebase-admin/app";
+import {getStorage} from "firebase-admin/storage";
+import {getAuth} from "firebase-admin/auth";
 import {
   FieldValue,
   getFirestore,
 } from "firebase-admin/firestore";
-import {getStorage} from "firebase-admin/storage";
 
 initializeApp();
 
 setGlobalOptions({maxInstances: 10});
 
 const db = getFirestore();
+const auth = getAuth();
 const bucket = getStorage().bucket(
   "campusconnect-3f38d.firebasestorage.app",
 );
@@ -257,24 +259,46 @@ async function deleteDirectUserSubcollections(uid: string): Promise<number> {
   return deletedDocuments;
 }
 
+
+async function deleteAuthUser(uid: string): Promise<void> {
+  try {
+    await auth.deleteUser(uid);
+  } catch (error: unknown) {
+    const code = (error as {code?: string}).code;
+
+    if (code !== "auth/user-not-found") {
+      throw error;
+    }
+  }
+}
+
+async function deleteUserDocuments(uid: string): Promise<void> {
+  const bulkWriter = db.bulkWriter();
+
+  bulkWriter.delete(db.collection("users").doc(uid));
+  bulkWriter.delete(db.collection("admin").doc(uid));
+
+  await bulkWriter.close();
+}
+
   // Erst nach erfolgreicher Transaction Follow-Beziehungen, likes und Kommentare bereinigen.
-  await deleteFollowRelationships(uid);
-  await deleteUserInteractions("likes", uid);
-  await deleteUserInteractions("comments", uid);
-  await deleteFollowRelationships(uid);
-  await deleteUserNotifications(uid); 
-  await deleteUserPosts(uid);
-  await deleteUserReports(uid);
-  await deleteDirectUserSubcollections(uid);
-  await deleteUserStorageFiles(uid);
-  return {
-    allowed: true,
-    started: result.started,
-    status: "deleting",
-    message: result.started
-      ? "Die Accountlöschung wurde gestartet."
-      : "Die Accountlöschung wird fortgesetzt.",
-  };
+await deleteFollowRelationships(uid);
+await deleteUserInteractions("likes", uid);
+await deleteUserInteractions("comments", uid);
+await deleteUserNotifications(uid);
+await deleteUserReports(uid);
+await deleteUserPosts(uid);
+await deleteDirectUserSubcollections(uid);
+await deleteUserStorageFiles(uid);
+await deleteUserDocuments(uid);
+await deleteAuthUser(uid);
+ return {
+  allowed: true,
+  started: result.started,
+  status: "deleted",
+  message: "Die Accountlöschung wurde abgeschlossen.",
+};
+
 });
 async function deleteUserNotifications(uid: string): Promise<void> {
   const ownNotificationsRef = db
