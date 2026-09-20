@@ -13,6 +13,7 @@ import 'screens/main_navigation_screen.dart';
 import 'providers/theme_provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'services/push_notification_service.dart';
+import 'package:campus_connect/config/firebase_emulator_config.dart';
 
 
 void _configureGiphy() {
@@ -52,7 +53,8 @@ Future<void> _firebaseMessagingBackgroundHandler(
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-    FirebaseMessaging.onBackgroundMessage(
+
+   FirebaseMessaging.onBackgroundMessage(
     _firebaseMessagingBackgroundHandler,
   );
 
@@ -65,11 +67,20 @@ Future<void> _firebaseMessagingBackgroundHandler(
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  await configureFirebaseEmulators();
+
+  if (!useFirebaseEmulators) {
     final pushNotificationService = PushNotificationService();
-  pushNotificationService.initialize();
+    pushNotificationService.initialize();
+  }
+
   _configureGiphy();
+
   runApp(const MyApp());
 }
 
