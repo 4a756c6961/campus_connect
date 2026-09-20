@@ -9,7 +9,6 @@ import 'package:flutter/foundation.dart';
 import 'package:campus_connect/config/firebase_emulator_config.dart';
 import 'package:campus_connect/services/account_deletion_service.dart';
 
-
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
   static final AdminService _adminService = AdminService();
@@ -56,177 +55,195 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
-Future<void> _testAccountDeletionRequest(BuildContext context) async {
-  final service = AccountDeletionService();
+  Future<void> _requestAccountDeletion(BuildContext context) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentEmail = currentUser?.email ?? 'Unbekanntes Konto';
 
-  try {
-    final result = await service.requestAccountDeletion();
-
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${result.allowed}: ${result.message}',
-        ),
-      ),
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Account wirklich löschen?'),
+          content: Text(
+            'Du bist aktuell angemeldet als:\n\n'
+            '$currentEmail\n\n'
+            'Dieser Account und zugehörige Daten werden dauerhaft gelöscht. '
+            'Diese Aktion kann nicht rückgängig gemacht werden.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: const Text('Account löschen'),
+            ),
+          ],
+        );
+      },
     );
 
-    await FirebaseAuth.instance.signOut();
-  } on AccountDeletionException catch (error) {
-    if (!context.mounted) return;
+    if (shouldDelete != true) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${error.code}: ${error.message}',
-        ),
-      ),
-    );
-  } on FirebaseAuthException catch (error) {
-    if (!context.mounted) return;
+    final service = AccountDeletionService();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          error.message ?? 'Die lokale Abmeldung ist fehlgeschlagen.',
+    try {
+      final result = await service.requestAccountDeletion();
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${result.allowed}: ${result.message}')),
+      );
+
+      await FirebaseAuth.instance.signOut();
+    } on AccountDeletionException catch (error) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${error.code}: ${error.message}')),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.message ?? 'Die lokale Abmeldung ist fehlgeschlagen.',
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
 
-   return Scaffold(
-  appBar: AppBar(
-    title: const Text('Einstellungen'),
-  ),
-  body: ListView(
-    padding: const EdgeInsets.all(16),
-    children: [
-      Text(
-        'Darstellung',
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      const SizedBox(height: 12),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Einstellungen')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text('Darstellung', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
 
-      Card(
-        child: Column(
-          children: [
-            RadioListTile<ThemeMode>(
-              title: const Text('Systemeinstellung'),
-              secondary: const Icon(Icons.settings_suggest_outlined),
-              value: ThemeMode.system,
-              groupValue: themeProvider.themeMode,
-              onChanged: (value) {
-                if (value == null) return;
+          Card(
+            child: Column(
+              children: [
+                RadioListTile<ThemeMode>(
+                  title: const Text('Systemeinstellung'),
+                  secondary: const Icon(Icons.settings_suggest_outlined),
+                  value: ThemeMode.system,
+                  groupValue: themeProvider.themeMode,
+                  onChanged: (value) {
+                    if (value == null) return;
 
-                context.read<ThemeProvider>().setThemeMode(value);
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('Hell'),
-              secondary: const Icon(Icons.light_mode_outlined),
-              value: ThemeMode.light,
-              groupValue: themeProvider.themeMode,
-              onChanged: (value) {
-                if (value == null) return;
-
-                context.read<ThemeProvider>().setThemeMode(value);
-              },
-            ),
-            RadioListTile<ThemeMode>(
-              title: const Text('Dunkel'),
-              secondary: const Icon(Icons.dark_mode_outlined),
-              value: ThemeMode.dark,
-              groupValue: themeProvider.themeMode,
-              onChanged: (value) {
-                if (value == null) return;
-
-                context.read<ThemeProvider>().setThemeMode(value);
-              },
-            ),
-          ],
-        ),
-      ),
-
-      const SizedBox(height: 24),
-
-      Text(
-        'Konto',
-        style: Theme.of(context).textTheme.titleMedium,
-      ),
-      const SizedBox(height: 12),
-
-      Card(
-        child: ListTile(
-          leading: Icon(
-            Icons.logout,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          title: Text(
-            'Abmelden',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.error,
-            ),
-          ),
-          subtitle: const Text(
-            'Du wirst zum Anmeldebildschirm zurückgeleitet.',
-          ),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => _confirmLogout(context),
-        ),
-      ),
-
-      if (kDebugMode && useFirebaseEmulators) ...[
-        const SizedBox(height: 12),
-        Card(
-          child: ListTile(
-            leading: const Icon(Icons.science_outlined),
-            title: const Text('Accountlöschung testen'),
-            subtitle: const Text(
-              'Prüft nur die Berechtigung im Firebase Emulator.',
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _testAccountDeletionRequest(context),
-          ),
-        ),
-      ],
-
-      const SizedBox(height: 12),
-
-            FutureBuilder<bool>(
-        future: _adminService.isCurrentUserAdmin(),
-        builder: (context, snapshot) {
-          final isAdmin = snapshot.data ?? false;
-
-          if (!isAdmin) {
-            return const SizedBox.shrink();
-          }
-
-          return ListTile(
-            leading: const Icon(
-              Icons.admin_panel_settings_outlined,
-            ),
-            title: const Text('Administration'),
-            subtitle: const Text(
-              'Gemeldete Beiträge verwalten',
-            ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => AdminReportsScreen(),
+                    context.read<ThemeProvider>().setThemeMode(value);
+                  },
                 ),
+                RadioListTile<ThemeMode>(
+                  title: const Text('Hell'),
+                  secondary: const Icon(Icons.light_mode_outlined),
+                  value: ThemeMode.light,
+                  groupValue: themeProvider.themeMode,
+                  onChanged: (value) {
+                    if (value == null) return;
+
+                    context.read<ThemeProvider>().setThemeMode(value);
+                  },
+                ),
+                RadioListTile<ThemeMode>(
+                  title: const Text('Dunkel'),
+                  secondary: const Icon(Icons.dark_mode_outlined),
+                  value: ThemeMode.dark,
+                  groupValue: themeProvider.themeMode,
+                  onChanged: (value) {
+                    if (value == null) return;
+
+                    context.read<ThemeProvider>().setThemeMode(value);
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          Text('Konto', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+
+          Card(
+            child: ListTile(
+              leading: Icon(
+                Icons.logout,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'Abmelden',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              subtitle: const Text(
+                'Du wirst zum Anmeldebildschirm zurückgeleitet.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _confirmLogout(context),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: Icon(
+                Icons.delete_forever_outlined,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'Account löschen',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              subtitle: const Text(
+                'Löscht den aktuell angemeldeten Account dauerhaft.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _requestAccountDeletion(context),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          FutureBuilder<bool>(
+            future: _adminService.isCurrentUserAdmin(),
+            builder: (context, snapshot) {
+              final isAdmin = snapshot.data ?? false;
+
+              if (!isAdmin) {
+                return const SizedBox.shrink();
+              }
+
+              return ListTile(
+                leading: const Icon(Icons.admin_panel_settings_outlined),
+                title: const Text('Administration'),
+                subtitle: const Text('Gemeldete Beiträge verwalten'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => AdminReportsScreen()),
+                  );
+                },
               );
             },
-          );
-        },
+          ),
+        ],
       ),
-    ],
-  ),
-);
+    );
   }
 }

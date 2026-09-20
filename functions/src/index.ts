@@ -279,7 +279,8 @@ export const deleteAccount = onCall(async (request) => {
         if (activeAdmins.size <= 1) {
           throw new HttpsError(
             "failed-precondition",
-            "Der letzte aktive Administrator kann seinen Account nicht löschen.",
+            "Der letzte aktive Admin" +
+            "kann seinen Account nicht löschen.",
           );
         }
       }
@@ -310,8 +311,9 @@ export const deleteAccount = onCall(async (request) => {
       started: !alreadyDeleting,
     };
   });
-
-  // Erst nach erfolgreicher Transaction Follow-Beziehungen, likes und Kommentare bereinigen.
+  // Erst nach erfolgreicher
+  // Transaction Follow-Beziehungen,
+  //  likes und Kommentare bereinigen.
   await deleteFollowRelationships(uid);
   await deleteUserInteractions("likes", uid);
   await deleteUserInteractions("comments", uid);

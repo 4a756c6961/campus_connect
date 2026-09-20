@@ -28,7 +28,10 @@ if (!testPassword) {
   );
 }
 
-initializeApp({projectId, storageBucket: "campusconnect-3f38d.firebasestorage.app"});
+initializeApp({
+  projectId,
+  storageBucket: "campusconnect-3f38d.firebasestorage.app",
+});
 
 const db = getFirestore();
 const auth = getAuth();
