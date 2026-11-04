@@ -4,6 +4,10 @@ import 'package:provider/provider.dart';
 import 'package:campus_connect/screens/admin_reports_screen.dart';
 import 'package:campus_connect/services/admin_service.dart';
 import 'package:campus_connect/providers/theme_provider.dart';
+import 'package:flutter/foundation.dart';
+
+import 'package:campus_connect/config/firebase_emulator_config.dart';
+import 'package:campus_connect/services/account_deletion_service.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -51,6 +55,75 @@ class SettingsScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _requestAccountDeletion(BuildContext context) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final currentEmail = currentUser?.email ?? 'Unbekanntes Konto';
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Account wirklich löschen?'),
+          content: Text(
+            'Du bist aktuell angemeldet als:\n\n'
+            '$currentEmail\n\n'
+            'Dieser Account und zugehörige Daten werden dauerhaft gelöscht. '
+            'Diese Aktion kann nicht rückgängig gemacht werden.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(false);
+              },
+              child: const Text('Abbrechen'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(true);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+              ),
+              child: const Text('Account löschen'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true) return;
+
+    final service = AccountDeletionService();
+
+    try {
+      final result = await service.requestAccountDeletion();
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${result.allowed}: ${result.message}')),
+      );
+
+      await FirebaseAuth.instance.signOut();
+    } on AccountDeletionException catch (error) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${error.code}: ${error.message}')),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            error.message ?? 'Die lokale Abmeldung ist fehlgeschlagen.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
@@ -62,6 +135,7 @@ class SettingsScreen extends StatelessWidget {
         children: [
           Text('Darstellung', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
+
           Card(
             child: Column(
               children: [
@@ -101,9 +175,12 @@ class SettingsScreen extends StatelessWidget {
               ],
             ),
           ),
+
           const SizedBox(height: 24),
+
           Text('Konto', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 12),
+
           Card(
             child: ListTile(
               leading: Icon(
@@ -121,6 +198,28 @@ class SettingsScreen extends StatelessWidget {
               onTap: () => _confirmLogout(context),
             ),
           ),
+
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: Icon(
+                Icons.delete_forever_outlined,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              title: Text(
+                'Account löschen',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              subtitle: const Text(
+                'Löscht den aktuell angemeldeten Account dauerhaft.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _requestAccountDeletion(context),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
           FutureBuilder<bool>(
             future: _adminService.isCurrentUserAdmin(),
             builder: (context, snapshot) {
