@@ -48,3 +48,15 @@ lib/firebase_options.dart
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
 macos/Runner/GoogleService-Info.plist
+
+# Firebase Cloud Functions
+functions/node_modules/
+functions/lib/
+functions/.env
+functions/.env.*
+functions/.runtimeconfig.json
+functions/firebase-debug.log
+functions/npm-debug.log*
+
+# Node.js
+npm-debug.log*
