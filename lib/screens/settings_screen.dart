@@ -4,9 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:campus_connect/screens/admin_reports_screen.dart';
 import 'package:campus_connect/services/admin_service.dart';
 import 'package:campus_connect/providers/theme_provider.dart';
-import 'package:flutter/foundation.dart';
 
-import 'package:campus_connect/config/firebase_emulator_config.dart';
 import 'package:campus_connect/services/account_deletion_service.dart';
 
 class SettingsScreen extends StatelessWidget {
