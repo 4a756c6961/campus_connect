@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -58,13 +59,12 @@ class AuthScreen extends StatelessWidget {
                       ),
                       child: Text(
                         'Campus Connect',
-                        style: Theme.of(
-                          context,
-                        ).textTheme.headlineMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          fontFamily: 'Anton',
-                          fontSize: 50,
-                        ),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              fontFamily: 'Anton',
+                              fontSize: 50,
+                            ),
                       ),
                     ),
                   ),
@@ -104,8 +104,9 @@ class _AuthCardState extends State<AuthCard> {
   final TextEditingController _passwordController = TextEditingController();
   void _switchAuthMode() {
     setState(() {
-      _authMode =
-          _authMode == AuthMode.login ? AuthMode.signup : AuthMode.login;
+      _authMode = _authMode == AuthMode.login
+          ? AuthMode.signup
+          : AuthMode.login;
     });
   }
 
@@ -155,13 +156,18 @@ class _AuthCardState extends State<AuthCard> {
       }
     } on FirebaseAuthException catch (e) {
       var message = 'Anmeldung fehlgeschlagen.';
+
       if (e.message != null) {
         message = e.message!;
       }
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     } catch (err) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Ein unerwarteter Fehler ist aufgetreten.'),
@@ -275,8 +281,10 @@ class _AuthCardState extends State<AuthCard> {
                     onPressed: _submit,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor:
-                          Theme.of(context).primaryTextTheme.labelLarge?.color,
+                      foregroundColor: Theme.of(context)
+                          .primaryTextTheme
+                          .labelLarge
+                          ?.color,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 30.0,
                         vertical: 8.0,
