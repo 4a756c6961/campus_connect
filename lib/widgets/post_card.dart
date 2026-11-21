@@ -62,13 +62,14 @@ class PostCard extends StatelessWidget {
 
     final hasPhoto = photoUrl.trim().isNotEmpty;
 
-    final initial =
-        authorName.trim().isNotEmpty
-            ? authorName.trim().characters.first.toUpperCase()
-            : '?';
+    final initial = authorName.trim().isNotEmpty
+        ? authorName.trim().characters.first.toUpperCase()
+        : '?';
 
-    final visibleTags =
-        tags.map((tag) => tag.trim()).where((tag) => tag.isNotEmpty).toList();
+    final visibleTags = tags
+        .map((tag) => tag.trim())
+        .where((tag) => tag.isNotEmpty)
+        .toList();
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -84,8 +85,9 @@ class PostCard extends StatelessWidget {
                   behavior: HitTestBehavior.opaque,
                   onTap: onAuthorTap,
                   child: CircleAvatar(
-                    backgroundImage:
-                        hasPhoto ? NetworkImage(photoUrl.trim()) : null,
+                    backgroundImage: hasPhoto
+                        ? NetworkImage(photoUrl.trim())
+                        : null,
                     child: hasPhoto ? null : Text(initial),
                   ),
                 ),
@@ -269,10 +271,9 @@ class PostCard extends StatelessWidget {
                   gifUrl.trim(),
                   width: double.infinity,
                   fit: BoxFit.contain,
-                  semanticLabel:
-                      gifTitle.trim().isNotEmpty
-                          ? gifTitle.trim()
-                          : 'GIPHY GIF',
+                  semanticLabel: gifTitle.trim().isNotEmpty
+                      ? gifTitle.trim()
+                      : 'GIPHY GIF',
                   loadingBuilder: (context, child, loadingProgress) {
                     if (loadingProgress == null) return child;
 
@@ -350,59 +351,56 @@ class PostCard extends StatelessWidget {
               ),
               actions: [
                 TextButton(
-                  onPressed:
-                      saving ? null : () => Navigator.of(dialogContext).pop(),
+                  onPressed: saving
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
                   child: const Text('Abbrechen'),
                 ),
                 ElevatedButton(
-                  onPressed:
-                      saving
-                          ? null
-                          : () async {
-                            final newText = controller.text.trim();
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          final newText = controller.text.trim();
 
-                            if (newText.isEmpty) {
+                          if (newText.isEmpty) {
+                            ScaffoldMessenger.of(parentContext).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Der Beitrag darf nicht leer sein.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          try {
+                            setState(() => saving = true);
+
+                            await parentContext.read<FeedProvider>().updatePost(
+                              postId,
+                              newText,
+                            );
+
+                            if (parentContext.mounted) {
+                              Navigator.of(dialogContext).pop();
                               ScaffoldMessenger.of(parentContext).showSnackBar(
                                 const SnackBar(
-                                  content: Text(
-                                    'Der Beitrag darf nicht leer sein.',
-                                  ),
+                                  content: Text('Beitrag wurde bearbeitet.'),
                                 ),
                               );
-                              return;
                             }
-
-                            try {
-                              setState(() => saving = true);
-
-                              await parentContext
-                                  .read<FeedProvider>()
-                                  .updatePost(postId, newText);
-
-                              if (parentContext.mounted) {
-                                Navigator.of(dialogContext).pop();
-                                ScaffoldMessenger.of(
-                                  parentContext,
-                                ).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Beitrag wurde bearbeitet.'),
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (parentContext.mounted) {
-                                ScaffoldMessenger.of(
-                                  parentContext,
-                                ).showSnackBar(
-                                  SnackBar(content: Text('Fehler: $e')),
-                                );
-                              }
-                            } finally {
-                              if (stateContext.mounted) {
-                                setState(() => saving = false);
-                              }
+                          } catch (e) {
+                            if (parentContext.mounted) {
+                              ScaffoldMessenger.of(parentContext).showSnackBar(
+                                SnackBar(content: Text('Fehler: $e')),
+                              );
                             }
-                          },
+                          } finally {
+                            if (stateContext.mounted) {
+                              setState(() => saving = false);
+                            }
+                          }
+                        },
                   child: const Text('Speichern'),
                 ),
               ],
@@ -416,6 +414,8 @@ class PostCard extends StatelessWidget {
   }
 
   Future<void> _showDeleteDialog(BuildContext context) async {
+    final feedProvider = context.read<FeedProvider>();
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -439,7 +439,7 @@ class PostCard extends StatelessWidget {
     if (confirmed != true) return;
 
     try {
-      await context.read<FeedProvider>().deletePost(postId);
+      await feedProvider.deletePost(postId);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -448,9 +448,8 @@ class PostCard extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Fehler: $e')));
       }
     }
   }
