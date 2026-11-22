@@ -57,8 +57,9 @@ class PostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    final isOwner = currentUser?.uid == userId;
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+
+    final isOwner = currentUserId != null && currentUserId == userId;
 
     final hasPhoto = photoUrl.trim().isNotEmpty;
 
@@ -143,9 +144,30 @@ class PostCard extends StatelessWidget {
                         onReportPost?.call();
                       }
                     },
+
                     itemBuilder: (context) {
                       if (isOwner) {
                         return [
+                          const PopupMenuItem<String>(
+                            value: 'edit',
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit_outlined),
+                                SizedBox(width: 10),
+                                Text('Beitrag bearbeiten'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Row(
+                              children: [
+                                Icon(Icons.delete_outline),
+                                SizedBox(width: 10),
+                                Text('Beitrag löschen'),
+                              ],
+                            ),
+                          ),
                           if (onTogglePin != null)
                             PopupMenuItem<String>(
                               value: 'pin',
@@ -165,35 +187,12 @@ class PostCard extends StatelessWidget {
                                 ],
                               ),
                             ),
-                          if (onHidePost != null)
-                            const PopupMenuItem(
-                              value: 'hide',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.visibility_off_outlined),
-                                  SizedBox(width: 10),
-                                  Text('Beitrag verbergen'),
-                                ],
-                              ),
-                            ),
-
-                          if (onReportPost != null)
-                            const PopupMenuItem(
-                              value: 'report',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.flag_outlined),
-                                  SizedBox(width: 10),
-                                  Text('Beitrag melden'),
-                                ],
-                              ),
-                            ),
                         ];
                       }
 
                       return [
                         if (onHidePost != null)
-                          const PopupMenuItem(
+                          const PopupMenuItem<String>(
                             value: 'hide',
                             child: Row(
                               children: [
@@ -203,9 +202,8 @@ class PostCard extends StatelessWidget {
                               ],
                             ),
                           ),
-
                         if (onReportPost != null)
-                          const PopupMenuItem(
+                          const PopupMenuItem<String>(
                             value: 'report',
                             child: Row(
                               children: [
